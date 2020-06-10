@@ -1,0 +1,9 @@
+**/autoload/
+**/doc/
+**/plugged/
+**/alias/
+**/current/
+**/nvm-exec
+**/nvm.sh
+**/versions
+vim/.vim/sessions/default.vim

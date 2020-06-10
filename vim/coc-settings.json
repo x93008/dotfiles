@@ -1,0 +1,31 @@
+{
+    "explorer.width": 30,
+    "explorer.keyMappings.global": {
+        "s": "open:vsplit",
+        "ma": "addFile",
+        "mA": "addDirectory",
+        "mm": "rename",
+        "a": false,
+        "A": false,
+        "I": "toggleHidden",
+        "r": false,
+        "l": false,
+        "h": false,
+        "<cr>": [
+            "expandable?",
+            ["expanded?", "collapse", "expand"],
+            "open"
+        ]
+    },
+    "languageserver": {
+        "qml": {
+            "command": "qmlls6",
+            "filetypes": ["qml"]
+        }
+    },
+    "explorer.file.child.template": "[selection | clip | 1] [indent][icon | 1] [diagnosticError & 1][filename omitCenter 1][modified][readonly] [linkIcon & 1]",
+    "explorer.bookmark.child.labelingTemplate": "[filename][fullpath][position][line][annotation]",
+    "explorer.file.child.labelingTemplate": "[filename][fullpath][link][diagnosticError][diagnosticWarning][git][size][timeAccessed][timeModified][timeCreated][readonly][modified]",
+    "explorer.previewAction.onHover": "labeling",
+    "explorer.icon.enableNerdfont": true
+}
