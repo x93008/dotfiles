@@ -1,4 +1,16 @@
 -- Hint: use `:h <option>` to figure out the meaning if needed
+
+-- Leader key
+vim.g.mapleader = ";" -- 分号作为 leader 键
+vim.g.maplocalleader = ";" -- 分号作为 local leader 键
+
+-- 禁用 netrw (nvim-tree 推荐)
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
+-- 启用 24-bit 颜色 (nvim-tree 推荐，用于更好的图标显示)
+vim.opt.termguicolors = true
+
 vim.opt.clipboard = 'unnamedplus' -- use system clipboard
 vim.opt.completeopt = { 'menu', 'menuone', 'noselect' }
 vim.opt.mouse = 'a' -- allow the mouse to be used in nvim

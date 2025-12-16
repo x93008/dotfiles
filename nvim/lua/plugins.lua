@@ -98,4 +98,25 @@ require("lazy").setup({
     },
     -- LSP插件, 输入:Mason 找到想要的lsp 按下i即可安装
     { "mason-org/mason.nvim", opts = {} },
+    -- 文件树插件
+    {
+        "nvim-tree/nvim-tree.lua",
+        version = "*",
+        dependencies = {
+            "nvim-tree/nvim-web-devicons", -- 可选，用于显示文件图标
+        },
+        config = function()
+            require("nvim-tree").setup({
+                -- 可以在这里添加自定义配置
+            })
+
+            -- 设置快捷键：使用 leader n 打开/关闭目录树
+            local api = require("nvim-tree.api")
+            vim.keymap.set('n', '<leader>n', api.tree.toggle, {
+                desc = "nvim-tree: Toggle",
+                noremap = true,
+                silent = true,
+            })
+        end,
+    },
 })
