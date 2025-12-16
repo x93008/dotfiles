@@ -16,10 +16,6 @@ return {
 		".clang-tidy",
 		".clang-format",
 		"compile_commands.json",
-		"build/Debug/compile_commands.json",
-		"build/Release/compile_commands.json",
-		"build/RelWithDebInfo/compile_commands.json",
-		"build/MinSizeRel/compile_commands.json",
 		"compile_flags.txt",
 		"configure.ac", -- AutoTools
 		".git",
