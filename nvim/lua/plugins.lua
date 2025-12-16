@@ -117,6 +117,11 @@ require("lazy").setup({
                 noremap = true,
                 silent = true,
             })
+
+            -- nvim-tree 默认快捷键（在目录树窗口中）：
+            -- C + V: 在垂直分屏（左右分屏）中打开文件
+            -- C + X: 在水平分屏（上下分屏）中打开文件
+            -- 按 g? 可以查看所有快捷键
         end,
     },
     -- vim-tmux-navigator: 在 vim 窗口和 tmux 面板之间无缝导航

@@ -1,0 +1,25 @@
+HOST bwg
+    HostName 104.243.16.216
+    Port 27125
+    User root
+HOST mac_server
+    HostName 172.20.73.61
+    Port 22
+    User maxhub
+# M@XHU13
+Host t31_server
+    HostName 172.20.71.35
+    Port 22
+    User screenshare
+Host debian11
+    HostName 172.20.11.142
+    Port 2022
+    User screenshare
+Host linux_server
+    HostName 172.20.11.142
+    Port 22
+    User screenshare
+Host debian10
+    HostName 127.0.0.1
+    Port 2022
+    User root

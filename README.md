@@ -71,3 +71,7 @@ dmg --help
 ### xmodmap
 
 ln -s ~/dotfiles/.Xmodmap ~/.Xmodmap
+
+### ssh
+
+ln -s ~/dotfiles/ssh/config ~/.ssh/config
