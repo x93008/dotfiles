@@ -27,3 +27,12 @@ vim.keymap.set('n', '<C-Right>', ':vertical resize +2<CR>', opts)
 -- Hint: start visual mode with the same area as the previous area and the same mode
 vim.keymap.set('v', '<', '<gv', opts)
 vim.keymap.set('v', '>', '>gv', opts)
+
+-----------------
+-- Line numbers --
+-----------------
+
+-- 切换相对行号和绝对行号显示
+vim.keymap.set('n', '<C-x>', function()
+    vim.opt.relativenumber = not vim.opt.relativenumber:get()
+end, { desc = "Toggle relative/absolute line numbers", noremap = true, silent = true })
