@@ -83,7 +83,7 @@ alias gs='gst'
 
 alias socks5proxy='export http_proxy=socks5://127.0.0.1:1080;export https_proxy=socks5://127.0.0.1:1080'
 # no_proxy 是让我们自己的conan不走代理, 实际上可以配置privoxy设置代理规则,不要全局代理
-# export no_proxy=artifactory.gz.cvte.cn
+export no_proxy=artifactory.gz.cvte.cn
 alias httpproxy='export http_proxy=http://127.0.0.1:10800; export https_proxy=$http_proxy'
 alias proxyoff='unset http_proxy; unset https_proxy'
 
