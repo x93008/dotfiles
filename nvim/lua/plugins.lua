@@ -132,4 +132,20 @@ require("lazy").setup({
         -- 插件会自动设置 <C-h>, <C-j>, <C-k>, <C-l>, <C-\> 快捷键
         -- 如果第一次不工作，可以尝试重启 neovim 或运行 :source %
     },
+    -- git-blame: 显示 git blame 信息
+    {
+        "f-person/git-blame.nvim",
+        config = function()
+            require("gitblame").setup({
+                -- 可以在这里添加自定义配置
+            })
+
+            -- 设置快捷键：使用 leader s 开关 git blame
+            vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', {
+                desc = "git-blame: Toggle",
+                noremap = true,
+                silent = true,
+            })
+        end,
+    },
 })
