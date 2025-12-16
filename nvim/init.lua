@@ -1,4 +1,8 @@
 require('options')
 require('keymaps')
-require('plugins')
+
+-- load lazy.nvim (package manager)
+require("plugin_manager")
+
+-- Set LSP
 require('lsp')

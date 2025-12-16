@@ -78,7 +78,7 @@ alias lupr='lupdate MaxhubAirReceiver.pro -locations none'
 alias guml='plantuml -tsvg'
 alias open='xdg-open'
 alias mj='make -j8'
-alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+#alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 alias gs='gst'
 
 alias socks5proxy='export http_proxy=socks5://127.0.0.1:1080;export https_proxy=socks5://127.0.0.1:1080'
