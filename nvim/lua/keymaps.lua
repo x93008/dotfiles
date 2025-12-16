@@ -9,11 +9,9 @@ local opts = {
 -----------------
 
 -- Hint: see `:h vim.map.set()`
--- Better window navigation
-vim.keymap.set('n', '<C-h>', '<C-w>h', opts)
-vim.keymap.set('n', '<C-j>', '<C-w>j', opts)
-vim.keymap.set('n', '<C-k>', '<C-w>k', opts)
-vim.keymap.set('n', '<C-l>', '<C-w>l', opts)
+-- Better window navigation (由 vim-tmux-navigator 插件提供，支持在 vim 和 tmux 之间无缝导航)
+-- vim-tmux-navigator 会自动设置 <C-h>, <C-j>, <C-k>, <C-l> 快捷键
+-- 如果需要自定义，可以在这里覆盖
 
 -- Resize with arrows
 -- delta: 2 lines
