@@ -10,7 +10,7 @@
 
     .zhsrc
 
-### nvm
+### nvm(已废弃)
 
 node版本控制器，如果这里不做软链接，那么manjrao安装的nvm不确定会用哪个目录作为$NVM_DIR的值，
 每次更新之后都可能之前配置和下载的node版本需要重新下载
@@ -25,7 +25,7 @@ node版本控制器，如果这里不做软链接，那么manjrao安装的nvm不
 
 需要先克隆dotfiles家目录, 以vim和zsh为例，其他大致雷同
 
-##### vim
+##### vim(已切换为nvim)
 
 1. 首先下载vim, 并创建`~/.vim`目录
 2. 创建以下软链接:
@@ -36,6 +36,13 @@ ln -s ~/dotfiles/vim/.vim/vimfile ~/.vim/vimfile
 ```
 3. vim打开.vimrc, 命令模式输入:PlugInstall
 
+
+##### nvim
+
+1. 下载neovim
+2. ln -s ~/dotfiles/nvim ~/.config/nvim
+
+
 ##### zsh
 
 1. 下载zsh、curl
@@ -43,6 +50,7 @@ ln -s ~/dotfiles/vim/.vim/vimfile ~/.vim/vimfile
 
 ```bahs
 ln -s ~/dotfiles/zsh/.zshrc ~/.zshrc
+ln -s ~/dotfiles/zsh/antigen.zsh ~/
 ```
 
 ### 环境迁移(新)
@@ -53,3 +61,13 @@ ln -s ~/dotfiles/zsh/.zshrc ~/.zshrc
 pip3 install dotfilesmanager
 dmg --help
 ```
+
+### Tmux
+
+1. install tmux
+2. ln -s ~/dotfiles/tmux/.tmux.conf ~/
+
+
+### xmodmap
+
+ln -s ~/dotfiles/.Xmodmap ~/.Xmodmap

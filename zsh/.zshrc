@@ -93,7 +93,7 @@ alias mount_public='sudo mount -t cifs -o gid=1000,uid=1000,username=lxx,passwor
 alias pc='proxychains'
 
 alias vim='nvim'
-alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
+#alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 
 # 使用gcc13, 方便conan使用
 alias usec13='export CC=gcc-13;export CXX=g++-13'
@@ -121,7 +121,7 @@ set -o vi
 # [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 
 # nvm 配置, manjaro安装
-source /usr/share/nvm/init-nvm.sh
+# source /usr/share/nvm/init-nvm.sh
 
 # 使用这个代理会导致异常
 # export NVM_NODEJS_ORG_MIRROR=http://npm.taobao.org/mirrors/node
@@ -147,9 +147,15 @@ fi
 
 # 用于增加lua require查找路径，lua仅对neovim生效
 # lua环境变量无法识别~，这里用HOME环境变量替换
-export LUA_PATH="$HOME/.vim/vimfile/?.lua;;"
-export LUA_PATH_5_3="$HOME/.vim/vimfile/?.lua;;"
+#export LUA_PATH="$HOME/.vim/vimfile/?.lua;;"
+#export LUA_PATH_5_3="$HOME/.vim/vimfile/?.lua;;"
 
 # 默认打开代理
 export http_proxy=http://127.0.0.1:10800
+#export http_proxy=http://127.0.0.1:8118
 export https_proxy=$http_proxy
+
+# 使用yay全局安装fnm
+eval "$(fnm env --use-on-cd --shell zsh)"
+
+#unalias cd
