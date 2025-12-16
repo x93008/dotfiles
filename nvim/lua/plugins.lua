@@ -105,24 +105,9 @@ require("lazy").setup({
         dependencies = {
             "nvim-tree/nvim-web-devicons", -- 可选，用于显示文件图标
         },
-        config = function()
-            require("nvim-tree").setup({
-                -- 可以在这里添加自定义配置
-            })
-
-            -- 设置快捷键：使用 leader n 打开/关闭目录树
-            local api = require("nvim-tree.api")
-            vim.keymap.set('n', '<leader>n', api.tree.toggle, {
-                desc = "nvim-tree: Toggle",
-                noremap = true,
-                silent = true,
-            })
-
-            -- nvim-tree 默认快捷键（在目录树窗口中）：
-            -- C + V: 在垂直分屏（左右分屏）中打开文件
-            -- C + X: 在水平分屏（上下分屏）中打开文件
-            -- 按 g? 可以查看所有快捷键
-        end,
+        opts = {
+            -- 可以在这里添加自定义配置
+        },
     },
     -- vim-tmux-navigator: 在 vim 窗口和 tmux 面板之间无缝导航
     {
@@ -135,17 +120,9 @@ require("lazy").setup({
     -- git-blame: 显示 git blame 信息
     {
         "f-person/git-blame.nvim",
-        config = function()
-            require("gitblame").setup({
-                -- 可以在这里添加自定义配置
-            })
-
-            -- 设置快捷键：使用 leader s 开关 git blame
-            vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', {
-                desc = "git-blame: Toggle",
-                noremap = true,
-                silent = true,
-            })
-        end,
+        opts = {
+            enabled = false, -- 默认关闭 git blame
+            -- 可以在这里添加其他自定义配置
+        },
     },
 })

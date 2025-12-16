@@ -36,3 +36,13 @@ vim.keymap.set('v', '>', '>gv', opts)
 vim.keymap.set('n', '<C-x>', function()
     vim.opt.relativenumber = not vim.opt.relativenumber:get()
 end, { desc = "Toggle relative/absolute line numbers", noremap = true, silent = true })
+
+-----------------
+-- Plugins --
+-----------------
+
+-- nvim-tree: 使用 leader n 打开/关闭目录树
+vim.keymap.set('n', '<leader>n', ':NvimTreeToggle<CR>', opts)
+
+-- git-blame: 使用 leader s 开关 git blame
+vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', opts)
