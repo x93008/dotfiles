@@ -46,3 +46,7 @@ vim.keymap.set('n', '<leader>n', ':NvimTreeToggle<CR>', opts)
 
 -- git-blame: 使用 leader s 开关 git blame
 vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', opts)
+
+-- nvim-telescope: leader ff查找文件，leader fg 过滤并查找内容
+vim.keymap.set('n', '<leader>ff', ':Telescope find_files<CR>', { desc = 'Telescope find files' })
+vim.keymap.set('n', '<leader>fg', ':Telescope live_grep<CR>', { desc = 'Telescope live grep' })
