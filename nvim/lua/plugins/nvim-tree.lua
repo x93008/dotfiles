@@ -7,6 +7,7 @@ return {
     },
     opts = {
         -- 可以在这里添加自定义配置
+        -- https://github.com/nvim-tree/nvim-tree.lua/blob/master/doc/nvim-tree-lua.txt
         on_attach = function(bufnr)
             local api = require "nvim-tree.api"
 
@@ -26,5 +27,8 @@ return {
             vim.keymap.set('n', 'i', api.tree.toggle_hidden_filter, opts('Toggle Filter: Dotfiles'))
             vim.keymap.set('n', '.', api.tree.change_root_to_node, opts('CD'))
         end,
+        update_focused_file = {
+            enable = true,
+        },
     },
 }
