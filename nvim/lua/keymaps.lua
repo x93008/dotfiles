@@ -50,3 +50,9 @@ vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', opts)
 -- nvim-telescope: leader ff查找文件，leader fg 过滤并查找内容
 vim.keymap.set('n', '<leader>ff', ':Telescope find_files<CR>', { desc = 'Telescope find files' })
 vim.keymap.set('n', '<leader>fg', ':Telescope live_grep<CR>', { desc = 'Telescope live grep' })
+
+-- conform.nvim: ctrl n 格式化整个文件
+vim.keymap.set({ "n", "v" }, "<C-n>", ":Format<CR>", {
+    desc = "[C]ode [F]ormat",
+    silent = true,
+})

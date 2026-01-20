@@ -6,6 +6,14 @@ HOST mac_server
     HostName 172.20.73.61
     Port 22
     User maxhub
+HOST mac
+    HostName 172.20.72.30
+    Port 22
+    User x93008
+HOST mac13
+    HostName 172.20.72.30
+    Port 22
+    User ac
 # M@XHU13
 Host t31_server
     HostName 172.20.71.35
@@ -15,6 +23,14 @@ Host debian11
     HostName 172.20.11.142
     Port 2022
     User screenshare
+Host embedded
+    HostName 172.20.11.142
+    Port 3022
+    User screenshare
+Host android_server
+    HostName 172.20.11.142
+    Port 4022
+    User screenshare
 Host linux_server
     HostName 172.20.11.142
     Port 22
@@ -23,7 +39,15 @@ Host debian10
     HostName 127.0.0.1
     Port 2022
     User root
+HOST arm
+    HostName 172.20.72.30
+    Port 2023
+    User root
 HOST kos11
-    HostName 172.20.72.38
+    HostName 172.20.72.99
     Port 22
-    User kos
+    User kos11
+HOST seewo
+    HostName 172.20.72.37
+    Port 22
+    User seewo
