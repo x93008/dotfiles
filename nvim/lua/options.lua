@@ -43,6 +43,16 @@ vim.opt.softtabstop = 4 -- number of spaces in tab when editing
 vim.opt.shiftwidth = 4 -- insert 4 spaces on a tab
 vim.opt.expandtab = true -- tabs are spaces, mainly because of Python
 
+-- 前端文件使用 2 空格缩进
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "html", "css", "scss", "less", "javascript", "javascriptreact", "typescriptreact", "typescript", "vue", "svelte", "json", "jsonc", "yaml", "toml" },
+    callback = function()
+        vim.bo.shiftwidth = 2
+        vim.bo.tabstop = 2
+        vim.bo.softtabstop = 2
+    end,
+})
+
 -- UI config
 vim.opt.number = true -- show absolute number
 vim.opt.relativenumber = false -- 默认显示绝对行号，使用 <C-x> 切换相对行号
