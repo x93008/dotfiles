@@ -24,3 +24,5 @@ vim.api.nvim_create_autocmd("LspAttach", {
 })
 
 vim.lsp.enable({ "ty", "clangd" })
+
+require("clangd_extensions").setup()
