@@ -33,8 +33,8 @@ antigen theme robbyrussell
 # 保存更改
 antigen apply
 
-# vim为默认编辑器
-export EDITOR=vim
+# nvim为默认编辑器
+export EDITOR=nvim
 
 # 将tmux配色方案改为screen-256color-bce
 #alias tmux="TERM=screen-256color-bce tmux"
@@ -93,6 +93,8 @@ alias mount_public='sudo mount -t cifs -o gid=1000,uid=1000,username=lxx,passwor
 alias pc='proxychains'
 
 alias vim='nvim'
+# alias加上空格，shell会自动将后面第一个命令进行别名展开，防止vim别名在sudo时候不生效
+alias sudo='sudo '
 #alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 
 # 使用gcc13, 方便conan使用

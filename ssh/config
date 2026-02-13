@@ -3,7 +3,11 @@ HOST bwg
     Port 27125
     User root
 HOST mac_server
-    HostName 172.20.73.61
+    HostName 172.20.11.53
+    Port 22
+    User maxhub
+HOST mac_server2
+    HostName 172.20.11.52
     Port 22
     User maxhub
 HOST mac
@@ -23,6 +27,11 @@ Host debian11
     HostName 172.20.11.142
     Port 2022
     User screenshare
+#maxhub123
+Host longxin_server
+    HostName 172.20.72.92
+    Port 22
+    User longxin
 Host embedded
     HostName 172.20.11.142
     Port 3022
@@ -47,7 +56,11 @@ HOST kos11
     HostName 172.20.72.99
     Port 22
     User kos11
+HOST zhaoxin
+    HostName 172.20.72.106
+    Port 22
+    User kos
 HOST seewo
-    HostName 172.20.72.37
+    HostName 172.20.72.39
     Port 22
     User seewo
