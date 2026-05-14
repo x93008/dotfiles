@@ -1,0 +1,68 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+  "sisyphus_agent": {
+    "default_builder_enabled": true,
+    "replace_plan": false
+  },
+  "agents": {
+    "sisyphus": {
+      "model": "cchClaude/claude-opus-4-6"
+    },
+    "hephaestus": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "oracle": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "librarian": {
+      "model": "cchDeepseek/deepseek-v4-flash"
+    },
+    "explore": {
+      "model": "cchDeepseek/deepseek-v4-flash"
+    },
+    "multimodal-looker": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "prometheus": {
+      "model": "cchClaude/claude-opus-4-6"
+    },
+    "metis": {
+      "model": "cchClaude/claude-opus-4-6"
+    },
+    "momus": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "atlas": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "sisyphus-junior": {
+      "model": "cchClaude/claude-opus-4-6"
+    }
+  },
+  "categories": {
+    "visual-engineering": {
+      "model": "cchClaude/claude-opus-4-6"
+    },
+    "ultrabrain": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "deep": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "artistry": {
+      "model": "cchDeepseek/deepseek-v4-pro"
+    },
+    "quick": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "unspecified-low": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "unspecified-high": {
+      "model": "cchClaude/claude-sonnet-4-6"
+    },
+    "writing": {
+      "model": "cchDeepseek/deepseek-v4-flash"
+    }
+  }
+}

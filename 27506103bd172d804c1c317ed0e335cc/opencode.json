@@ -1,0 +1,129 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "zhipuai-coding-plan": {
+      "options": {
+        "apiKey": "{env:ZHIPU_API_KEY}"
+      }
+    },
+    "cchClaude": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "Claude via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1",
+        "apiKey": "{env:CCH_API_KEY}"
+      },
+      "models": {
+        "claude-haiku-4-5-20251001": {
+          "name": "Claude Haiku 4.5"
+        },
+        "claude-sonnet-4-6": {
+          "name": "Claude Sonnet 4.6"
+        },
+        "claude-opus-4-6": {
+          "name": "Claude Opus 4.6"
+        },
+        "claude-opus-4-7": {
+          "name": "Claude Opus 4.7"
+        }
+      }
+    },
+    "cchGPT": {
+      "npm": "@ai-sdk/openai",
+      "name": "GPT via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1",
+        "apiKey": "{env:CCH_API_KEY}",
+        "store": false,
+        "setCacheKey": true
+      },
+      "models": {
+        "gpt-5.4": {
+          "name": "GPT-5.4",
+          "options": {
+            "reasoningEffort": "xhigh",
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "gpt-5.4-mini": {
+          "name": "GPT-5.4 Mini",
+          "options": {
+            "store": false
+          }
+        },
+        "gpt-5.3-codex": {
+          "name": "GPT-5.3-codex",
+          "options": {
+            "reasoningEffort": "xhigh",
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        },
+        "gpt-5.2": {
+          "name": "GPT-5.2",
+          "options": {
+            "reasoningEffort": "xhigh",
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ]
+          }
+        }
+      }
+    },
+    "cchGemini": {
+      "npm": "@ai-sdk/google",
+      "name": "Gemini via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1beta",
+        "apiKey": "{env:CCH_API_KEY}"
+      },
+      "models": {
+        "gemini-3.1-pro-preview": {
+          "name": "Gemini 3.1 Pro Preview"
+        },
+        "gemini-3-flash-preview": {
+          "name": "Gemini 3 Flash Preview"
+        }
+      }
+    },
+    "cchDeepseek": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Deepseek via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1",
+        "apiKey": "{env:CCH_API_KEY}"
+      },
+      "models": {
+        "deepseek-v4-flash": {
+          "name": "Deepseek V4 Flash"
+        },
+        "deepseek-v4-pro": {
+          "name": "Deepseek V4 Pro"
+        }
+      }
+    },
+    "friendmlx": {
+      "npm": "@ai-sdk/openai",
+      "name": "Friend MLX",
+      "options": {
+        "baseURL": "http://120.48.144.58:8901/v1",
+        "apiKey": "{env:FRIEND_MLX_API_KEY}"
+      },
+      "models": {
+        "MLX-Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-4bit": {
+          "name": "MLX Qwen3.5 9B Distilled"
+        }
+      }
+    }
+  },
+  "plugin": [
+    "oh-my-openagent@latest",
+    "superpowers@git+https://github.com/obra/superpowers.git"
+  ]
+}
