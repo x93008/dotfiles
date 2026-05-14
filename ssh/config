@@ -11,13 +11,17 @@ HOST mac_server2
     Port 22
     User maxhub
 HOST mac
-    HostName 172.20.72.30
+    HostName 172.20.72.83
     Port 22
     User x93008
 HOST mac13
     HostName 172.20.72.30
     Port 22
     User ac
+HOST win
+    HostName 172.20.72.56
+    Port 22
+    User x9300
 # M@XHU13
 Host t31_server
     HostName 172.20.71.35
@@ -48,8 +52,12 @@ Host debian10
     HostName 127.0.0.1
     Port 2022
     User root
+Host conan2
+    HostName 127.0.0.1
+    Port 2023
+    User root
 HOST arm
-    HostName 172.20.72.30
+    HostName 172.20.72.38
     Port 2023
     User root
 HOST kos11
@@ -61,6 +69,10 @@ HOST zhaoxin
     Port 22
     User kos
 HOST seewo
-    HostName 172.20.72.39
+    HostName 172.20.72.46
     Port 22
     User seewo
+HOST dao
+    HostName 192.168.1.107
+    Port 22
+    User test

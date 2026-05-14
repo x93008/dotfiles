@@ -97,6 +97,8 @@ alias vim='nvim'
 alias sudo='sudo '
 #alias cmake='cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON'
 
+alias conan2='source /home/x93008/venv_conan2/bin/activate'
+
 # 使用gcc13, 方便conan使用
 alias usec13='export CC=gcc-13;export CXX=g++-13'
 alias useqt12='export PATH=/home/lxx/Qt5.12.11/5.12.11/gcc_64/bin:$PATH;export LD_LIBRARY_PATH=/home/lxx/Qt5.12.11/5.12.11/gcc_64/lib:$LD_LIBRARY_PATH;export LIBRARY_PATH=/home/lxx/Qt5.12.11/5.12.11/gcc_64/lib:$LIBRARY_PATH'
@@ -161,3 +163,6 @@ export https_proxy=$http_proxy
 eval "$(fnm env --use-on-cd --shell zsh)"
 
 #unalias cd
+
+# Added by git-ai installer on 2026年 03月 17日 星期二 09:14:35 CST
+export PATH="/home/x93008/.git-ai/bin:$PATH"
