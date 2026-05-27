@@ -1,0 +1,36 @@
+.gitattributes
+  71bb0d882b991819 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.16",
+  "base_commit_sha": "c1b0a8eb46ea55b3022dd23d8975b4a45ef2331a",
+  "prompts": {
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 82,
+      "total_deletions": 0,
+      "accepted_lines": 82,
+      "overriden_lines": 0
+    },
+    "71bb0d882b991819": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-e5a8adf8-2c4f-446b-be82-74f778f1bf1a",
+        "model": "unknown"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
