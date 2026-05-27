@@ -51,6 +51,10 @@ vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', opts)
 vim.keymap.set('n', '<leader>ff', ':Telescope find_files<CR>', { desc = 'Telescope find files' })
 vim.keymap.set('n', '<leader>fg', ':Telescope live_grep<CR>', { desc = 'Telescope live grep' })
 
+-- 对内置注释的快捷键重新映射(gcc、gc、leader l都可以用来注释)
+vim.keymap.set('n', '<leader>l', 'gcc', { remap = true, desc = 'Toggle line comment' })
+vim.keymap.set('v', '<leader>l', 'gc', { remap = true, desc = 'Toggle line comment' })
+
 -- conform.nvim: ctrl n 格式化整个文件
 vim.keymap.set({ "n", "v" }, "<C-n>", ":Format<CR>", {
     desc = "[C]ode [F]ormat",
