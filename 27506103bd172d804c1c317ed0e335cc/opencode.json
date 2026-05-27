@@ -122,6 +122,12 @@
       }
     }
   },
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "chrome-devtools-mcp@latest", "--autoConnect"]
+    }
+  },
   "plugin": [
     "oh-my-openagent@latest",
     "superpowers@git+https://github.com/obra/superpowers.git"
