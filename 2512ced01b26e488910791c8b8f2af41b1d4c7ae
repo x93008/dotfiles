@@ -1,0 +1,106 @@
+7db20105ed83a56e1a86dcc64c27f646/nvim/lua/plugins/nvim-telescope.lua
+  e279111b34e4103d 4-11
+7db20105ed83a56e1a86dcc64c27f646/nvim/lua/keymaps.lua
+  ee7c4e8fbd46e884 50
+  919a0fb3752adc01 53-57,59
+  96bbeab8b5abed83 58
+  fb6ea7416f794cdd 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.16",
+  "base_commit_sha": "2512ced01b26e488910791c8b8f2af41b1d4c7ae",
+  "prompts": {
+    "32ed2c4de4326f4b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-16c7b73b-096f-4ce6-83ff-63cfd447517e",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 82,
+      "overriden_lines": 0
+    },
+    "919a0fb3752adc01": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-4aa0b4a7-a1bc-403d-a371-f67a32c354ac",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "96bbeab8b5abed83": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-6f2d2ca4-310e-4b9e-929a-c76dfff0e3ad",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "e279111b34e4103d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-7f288410-df01-46f7-94d0-10f50adca589",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 2,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "ee7c4e8fbd46e884": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-81164c15-7f6b-44c1-891c-1ee089b9f423",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "fb6ea7416f794cdd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_198c5dccaffeXKfreHHcDmnJ6e-5baae83c-549f-4f36-a112-f7ea6a347bf9",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
