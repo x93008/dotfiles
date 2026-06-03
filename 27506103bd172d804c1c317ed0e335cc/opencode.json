@@ -108,6 +108,35 @@
         }
       }
     },
+    "cchGlm": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "GLM via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1",
+        "apiKey": "{env:CCH_API_KEY}"
+      },
+      "models": {
+        "glm-5.1": {
+          "name": "GLM-5.1"
+        }
+      }
+    },
+    "cchQwen": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Qwen via cch",
+      "options": {
+        "baseURL": "{env:CCH_URL}/v1",
+        "apiKey": "{env:CCH_API_KEY}"
+      },
+      "models": {
+        "qwen3.7-max": {
+          "name": "Qwen3.7 Max"
+        },
+        "qwen3.7-plus": {
+          "name": "Qwen3.7 Plus"
+        }
+      }
+    },
     "friendmlx": {
       "npm": "@ai-sdk/openai",
       "name": "Friend MLX",
