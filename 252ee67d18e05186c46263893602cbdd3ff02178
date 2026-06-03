@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.16",
+  "base_commit_sha": "252ee67d18e05186c46263893602cbdd3ff02178",
+  "prompts": {
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 80,
+      "overriden_lines": 2
+    }
+  }
+}
