@@ -48,6 +48,7 @@ vim.keymap.set('n', '<leader>n', ':NvimTreeToggle<CR>', opts)
 vim.keymap.set('n', '<leader>s', ':GitBlameToggle<CR>', opts)
 
 -- nvim-telescope: leader ff查找文件，leader fg 过滤并查找内容，leader fr 恢复上次搜索，leader fp 列出所有缓存的搜索
+-- 在搜索结果页面按下ctrl + q,可以像ack插件一样，将结果放到quickfix里面，边改边看
 vim.keymap.set('n', '<leader>ff', ':Telescope find_files<CR>', { desc = 'Telescope find files' })
 vim.keymap.set('n', '<leader>fg', ':Telescope live_grep<CR>', { desc = 'Telescope live grep' })
 vim.keymap.set('v', '<leader>fg', function()

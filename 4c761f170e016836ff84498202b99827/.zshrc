@@ -86,6 +86,7 @@ alias socks5proxy='export http_proxy=socks5://127.0.0.1:1080;export https_proxy=
 export no_proxy=artifactory.gz.cvte.cn
 alias httpproxy='export http_proxy=http://127.0.0.1:10800; export https_proxy=$http_proxy'
 alias proxyoff='unset http_proxy; unset https_proxy'
+alias use_cch2='export CCH_API_KEY=$CCH_API_KEY2'
 
 alias mount_public='sudo mount -t cifs -o gid=1000,uid=1000,username=lxx,password=123456 //172.20.72.68/public/ /mnt/public'
 
