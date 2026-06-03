@@ -6,13 +6,13 @@
   },
   "agents": {
     "sisyphus": {
-      "model": "cchClaude/claude-opus-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "hephaestus": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "oracle": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "librarian": {
       "model": "cchDeepseek/deepseek-v4-flash"
@@ -21,45 +21,45 @@
       "model": "cchDeepseek/deepseek-v4-flash"
     },
     "multimodal-looker": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "prometheus": {
-      "model": "cchClaude/claude-opus-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "metis": {
-      "model": "cchClaude/claude-opus-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "momus": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "atlas": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "sisyphus-junior": {
-      "model": "cchClaude/claude-opus-4-6"
+      "model": "cchQwen/qwen-plus"
     }
   },
   "categories": {
     "visual-engineering": {
-      "model": "cchClaude/claude-opus-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "ultrabrain": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "deep": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-max"
     },
     "artistry": {
       "model": "cchDeepseek/deepseek-v4-pro"
     },
     "quick": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchDeepseek/deepseek-v4-flash"
     },
     "unspecified-low": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "unspecified-high": {
-      "model": "cchClaude/claude-sonnet-4-6"
+      "model": "cchQwen/qwen-plus"
     },
     "writing": {
       "model": "cchDeepseek/deepseek-v4-flash"
