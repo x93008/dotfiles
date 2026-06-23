@@ -2,9 +2,9 @@ dotfiles:
   27506103bd172d804c1c317ed0e335cc/oh-my-openagent.json:
     linux:
       path: ~/.config/opencode/oh-my-openagent.json
-  27506103bd172d804c1c317ed0e335cc/opencode.json:
+  27506103bd172d804c1c317ed0e335cc/opencode.jsonc:
     linux:
-      path: ~/.config/opencode/opencode.json
+      path: ~/.config/opencode/opencode.jsonc
   4c761f170e016836ff84498202b99827/.Xmodmap:
     linux:
       path: ~/.Xmodmap
