@@ -6,13 +6,13 @@
   },
   "agents": {
     "sisyphus": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "hephaestus": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "oracle": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "librarian": {
       "model": "cchDeepseek/deepseek-v4-flash"
@@ -21,33 +21,33 @@
       "model": "cchDeepseek/deepseek-v4-flash"
     },
     "multimodal-looker": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "prometheus": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "metis": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "momus": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "atlas": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "sisyphus-junior": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     }
   },
   "categories": {
     "visual-engineering": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "ultrabrain": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "deep": {
-      "model": "cchQwen/qwen-max"
+      "model": "cchGlm/glm-5.2"
     },
     "artistry": {
       "model": "cchDeepseek/deepseek-v4-pro"
@@ -56,10 +56,10 @@
       "model": "cchDeepseek/deepseek-v4-flash"
     },
     "unspecified-low": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "unspecified-high": {
-      "model": "cchQwen/qwen-plus"
+      "model": "cchQwen/qwen3.7-plus"
     },
     "writing": {
       "model": "cchDeepseek/deepseek-v4-flash"
