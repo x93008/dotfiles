@@ -1,0 +1,76 @@
+27506103bd172d804c1c317ed0e335cc/oh-my-openagent.json
+  c2fa020781a4cc93 12,24,33,36,39,44,59,62
+  3be8ad7dd0d4294e 9,15,27,30,47,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.3",
+  "base_commit_sha": "a671afbc5821ed0708a5acc5fa2f816cd468d4c5",
+  "prompts": {
+    "08aa7112b1c6384e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0fcf00dfcffeaK3zMK8Tw5mVbc-58009b4c-fec5-4b54-866a-39b1aabb5080",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 6,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "3be8ad7dd0d4294e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0fcf00dfcffeaK3zMK8Tw5mVbc-e97d6582-21ed-4c48-af4e-31f5c95b39f5",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 6,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    },
+    "45cdc6685d47dfc6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_10d8b161cffeGUAICxnMcx7qM6",
+        "model": "zhipuai-coding-plan/glm-5.2"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 1
+    },
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    },
+    "c2fa020781a4cc93": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0fcf00dfcffeaK3zMK8Tw5mVbc-4e809d39-f745-43a1-ba36-ef213edbf227",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 8,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}
