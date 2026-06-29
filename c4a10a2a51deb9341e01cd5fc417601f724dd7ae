@@ -1,0 +1,34 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.3",
+  "base_commit_sha": "c4a10a2a51deb9341e01cd5fc417601f724dd7ae",
+  "prompts": {
+    "45cdc6685d47dfc6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_10d8b161cffeGUAICxnMcx7qM6",
+        "model": "zhipuai-coding-plan/glm-5.2"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    }
+  }
+}
