@@ -1,0 +1,73 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.3",
+  "base_commit_sha": "c40622b2b53dfb22ecbd27f7f1f18ef09c7c5abf",
+  "prompts": {
+    "2f2c1bcd275e4894": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0ede6fe43ffel4P48YRnCqFr2H-57ee252d-a92a-4297-b45e-308e48ec70f0",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 2,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "45cdc6685d47dfc6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_10d8b161cffeGUAICxnMcx7qM6",
+        "model": "zhipuai-coding-plan/glm-5.2"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "558431401d652e03": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_1990350d9ffebPUkqt5Gy7g6xR-9b184c04-0284-49cd-bc7a-0dac008591c6",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    },
+    "65dea29fa15c2ca9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0ede6fe43ffel4P48YRnCqFr2H-bfdea564-5b63-4674-a4b6-76ebbfc10599",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "ac3661e730199fb1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "opencode-transcript-ses_0eeaa5bfcffeDf16UVD0YQbosZ-a5b59962-4124-479f-991a-ecf573046ccf",
+        "model": "unknown"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
