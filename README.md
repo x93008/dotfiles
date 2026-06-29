@@ -15,7 +15,8 @@ pip3 install dotfilesmanager
 ##### 工具使用介绍
 
 初始使用：
-> 改工具会自动读取`~/dotfiles`目录，如果不存在，会自动创建，所以如果是要同步远程的，需要先clone仓库到HOME目录
+> 该工具会自动读取`~/dotfiles`目录，如果不存在，会自动创建，所以如果是要同步远程的，需要先clone仓库到HOME目录。
+> Windows 创建软链接默认需要管理员权限，所以dmf工具会检查是否已管理员权限运行。推荐下载gsudo(scoop install gsudo)。然后用gsudo运行。
 
 将一个文件添加到dotfile管理：
 ```bash
