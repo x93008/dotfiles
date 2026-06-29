@@ -7,7 +7,7 @@
         "apiKey": "{env:ZHIPUAI_API_KEY}"
       }
     },
-    "cchClaude": {
+    "cch-claude": {
       "npm": "@ai-sdk/anthropic",
       "name": "Claude via cch",
       "options": {
@@ -29,7 +29,7 @@
         }
       }
     },
-    "cchGPT": {
+    "cch-gpt": {
       "npm": "@ai-sdk/openai",
       "name": "GPT via cch",
       "options": {
@@ -77,7 +77,7 @@
         }
       }
     },
-    "cchGemini": {
+    "cch-gemini": {
       "npm": "@ai-sdk/google",
       "name": "Gemini via cch",
       "options": {
@@ -93,7 +93,7 @@
         }
       }
     },
-    "cchDeepseek": {
+    "cch-deepseek": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Deepseek via cch",
       "options": {
@@ -109,7 +109,7 @@
         }
       }
     },
-    "cchGlm": {
+    "cch-glm": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "GLM via cch",
       "api": "https://open.bigmodel.cn/api/coding/paas/v4",
@@ -126,7 +126,7 @@
         }
       }
     },
-    "cchQwen": {
+    "cch-qwen": {
       "npm": "@ai-sdk/openai-compatible",
       "name": "Qwen via cch",
       "options": {
