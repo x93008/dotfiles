@@ -15,6 +15,9 @@ dotfiles:
   4c761f170e016836ff84498202b99827/.tmux.conf:
     linux:
       path: ~/.tmux.conf
+  4c761f170e016836ff84498202b99827/.zshenv:
+    linux:
+      path: ~/.zshenv
   4c761f170e016836ff84498202b99827/.zshrc:
     linux:
       path: ~/.zshrc
