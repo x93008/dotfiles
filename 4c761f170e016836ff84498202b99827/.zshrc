@@ -175,6 +175,3 @@ if [[ -f $HOME/.config/secret.env ]]; then
         set +a
     fi
 fi
-
-# Added by git-ai installer on 2026年 04月 02日 星期四 14:03:33 CST
-export PATH="/home/x93008/.git-ai/bin:$PATH"
