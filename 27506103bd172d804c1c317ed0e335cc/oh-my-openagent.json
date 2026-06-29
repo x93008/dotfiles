@@ -6,13 +6,13 @@
   },
   "agents": {
     "sisyphus": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "hephaestus": {
       "model": "cchQwen/qwen3.7-plus"
     },
     "oracle": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "librarian": {
       "model": "cchDeepseek/deepseek-v4-flash"
@@ -24,10 +24,10 @@
       "model": "cchQwen/qwen3.7-plus"
     },
     "prometheus": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "metis": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "momus": {
       "model": "cchQwen/qwen3.7-plus"
@@ -44,10 +44,10 @@
       "model": "cchQwen/qwen3.7-plus"
     },
     "ultrabrain": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "deep": {
-      "model": "zhipuai-coding-plan/glm-5.2"
+      "model": "cchGlm/glm-5.2"
     },
     "artistry": {
       "model": "cchDeepseek/deepseek-v4-pro"
