@@ -138,7 +138,7 @@ set -o vi
 # 下面的镜像最近老有问题,可以使用此选项取消代理,实测也挺快的，--registry=http://r.cnpmjs.org
 # npm config set --location=global registry=https://registry.npmmirror.com
 # 垃圾代理，一堆问题，换回无代理状态
-npm config set --location=global registry=http://r.cnpmjs.org
+npm config set --location=user registry=http://r.cnpmjs.org
 
 if [ $MODMAP_SET ]; then
 elif [ "$XDG_SESSION_TYPE" = "x11" ]; then
