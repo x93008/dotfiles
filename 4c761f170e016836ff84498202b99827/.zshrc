@@ -175,3 +175,6 @@ if [[ -f $HOME/.config/secret.env ]]; then
         set +a
     fi
 fi
+
+# 对PATH环境变量的路径做一次去重
+typeset -U path
