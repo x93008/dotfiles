@@ -114,8 +114,7 @@
       "name": "GLM via cch",
       "api": "https://open.bigmodel.cn/api/coding/paas/v4",
       "options": {
-        "baseURL": "{env:CCH_URL}/v1",
-        "apiKey": "{env:CCH_API_KEY}"
+        "baseURL": "{env:CCH_URL}/v1"
       },
       "models": {
         "glm-5.1": {
