@@ -2,9 +2,13 @@ dotfiles:
   27506103bd172d804c1c317ed0e335cc/oh-my-openagent.json:
     linux:
       path: ~/.config/opencode/oh-my-openagent.json
+    windows:
+      path: ~\.config\opencode\oh-my-openagent.json
   27506103bd172d804c1c317ed0e335cc/opencode.jsonc:
     linux:
       path: ~/.config/opencode/opencode.jsonc
+    windows:
+      path: ~\.config\opencode\opencode.jsonc
   4c761f170e016836ff84498202b99827/.Xmodmap:
     linux:
       path: ~/.Xmodmap
@@ -29,3 +33,5 @@ dotfiles:
   7ee7766eae7c257dd5af33aceeb4af35/auth.json:
     linux:
       path: ~/.local/share/opencode/auth.json
+    windows:
+      path: ~\.local\share\opencode\auth.json
