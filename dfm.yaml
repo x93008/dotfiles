@@ -1,9 +1,9 @@
 dotfiles:
-  27506103bd172d804c1c317ed0e335cc/oh-my-openagent.json:
+  27506103bd172d804c1c317ed0e335cc/oh-my-opencode-slim.json:
     linux:
-      path: ~/.config/opencode/oh-my-openagent.json
+      path: ~/.config/opencode/oh-my-opencode-slim.json
     windows:
-      path: ~\.config\opencode\oh-my-openagent.json
+      path: ~\.config\opencode\oh-my-opencode-slim.json
   27506103bd172d804c1c317ed0e335cc/opencode.jsonc:
     linux:
       path: ~/.config/opencode/opencode.jsonc

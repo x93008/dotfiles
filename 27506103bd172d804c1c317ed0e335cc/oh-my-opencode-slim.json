@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
+  "preset": "glm",
+  "presets": {
+    "glm": {
+      "orchestrator": { "model": "zhipuai-coding-plan/glm-5.1" },
+      "oracle": { "model": "zhipuai-coding-plan/glm-5.2" },
+      "librarian": { "model": "opencode/deepseek-v4-flash-free" },
+      "explorer": { "model": "opencode/deepseek-v4-flash-free" },
+      "designer": { "model": "zhipuai-coding-plan/glm-5.1" },
+      "fixer": { "model": "opencode/deepseek-v4-flash-free" },
+      "councillor": { "model": "zhipuai-coding-plan/glm-5.1" }
+    }
+  }
+}
