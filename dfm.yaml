@@ -1,4 +1,7 @@
 dotfiles:
+  27506103bd172d804c1c317ed0e335cc/.npmrc:
+    windows:
+      path: ~\.config\opencode\.npmrc
   27506103bd172d804c1c317ed0e335cc/oh-my-opencode-slim.json:
     linux:
       path: ~/.config/opencode/oh-my-opencode-slim.json
@@ -24,9 +27,6 @@ dotfiles:
   4c761f170e016836ff84498202b99827/antigen.zsh:
     linux:
       path: ~/antigen.zsh
-  4d2e5a0220e12f571caf6be67ec64ec3/.npmrc:
-    windows:
-      path: ~\.config\opencode\.npmrc
   6ee1504095caefc322f5ca38b8074fd4/config:
     linux:
       path: ~/.ssh/config
