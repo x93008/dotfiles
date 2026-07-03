@@ -1,13 +1,19 @@
 dotfiles:
   27506103bd172d804c1c317ed0e335cc/.npmrc:
+    darwin:
+      path: ~/.config/opencode/.npmrc
     windows:
       path: ~\.config\opencode\.npmrc
   27506103bd172d804c1c317ed0e335cc/oh-my-opencode-slim.json:
+    darwin:
+      path: ~/.config/opencode/oh-my-opencode-slim.json
     linux:
       path: ~/.config/opencode/oh-my-opencode-slim.json
     windows:
       path: ~\.config\opencode\oh-my-opencode-slim.json
   27506103bd172d804c1c317ed0e335cc/opencode.jsonc:
+    darwin:
+      path: ~/.config/opencode/opencode.jsonc
     linux:
       path: ~/.config/opencode/opencode.jsonc
     windows:
@@ -37,6 +43,8 @@ dotfiles:
     linux:
       path: ~/.config/secret.env
   7ee7766eae7c257dd5af33aceeb4af35/auth.json:
+    darwin:
+      path: ~/.local/share/opencode/auth.json
     linux:
       path: ~/.local/share/opencode/auth.json
     windows:
