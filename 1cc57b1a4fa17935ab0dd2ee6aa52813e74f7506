@@ -1,0 +1,23 @@
+4c761f170e016836ff84498202b99827/.zshrc
+  b60a0f9543b36df7 33-34,36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "1cc57b1a4fa17935ab0dd2ee6aa52813e74f7506",
+  "prompts": {
+    "b60a0f9543b36df7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0c9d1259effemgl0GLhGvBnHP4",
+        "model": "zhipuai-coding-plan/glm-5.1"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 97,
+      "total_deletions": 5,
+      "accepted_lines": 96,
+      "overriden_lines": 1
+    }
+  }
+}
