@@ -24,6 +24,9 @@ dotfiles:
   4c761f170e016836ff84498202b99827/.tmux.conf:
     linux:
       path: ~/.tmux.conf
+  4c761f170e016836ff84498202b99827/.xprofile:
+    linux:
+      path: ~/.xprofile
   4c761f170e016836ff84498202b99827/.zshenv:
     linux:
       path: ~/.zshenv

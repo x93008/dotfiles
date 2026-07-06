@@ -1,0 +1,15 @@
+export LC_ALL=zh_CN.UTF-8
+
+# 通用输入法配置
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS="@im=fcitx"
+
+# 游戏/多媒体框架
+export SDL_IM_MODULE=fcitx
+export GLFW_IM_MODULE=fcitx
+
+# 遗留库支持
+export CLUTTER_IM_MODULE=fcitx
+
+export INPUT_METHOD=fcitx
