@@ -30,8 +30,12 @@ antigen bundle zsh-users/zsh-autosuggestions
 # z跳转
 antigen bundle skywind3000/z.lua
 
-# 加载主题
-antigen theme robbyrussell
+# SSH 登录用 minimal 主题，本地终端用 robbyrussell
+if [[ -n "$SSH_CONNECTION" ]]; then
+  antigen theme af-magic
+else
+  antigen theme robbyrussell
+fi
 
 # 开启vi命令行模式
 antigen bundle vi-mode
