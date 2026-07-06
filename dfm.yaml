@@ -28,12 +28,16 @@ dotfiles:
     linux:
       path: ~/.xprofile
   4c761f170e016836ff84498202b99827/.zsh:
+    darwin:
+      path: ~/.zsh
     linux:
       path: ~/.zsh
   4c761f170e016836ff84498202b99827/.zshenv:
     linux:
       path: ~/.zshenv
   4c761f170e016836ff84498202b99827/.zshrc:
+    darwin:
+      path: ~/.zshrc
     linux:
       path: ~/.zshrc
   6ee1504095caefc322f5ca38b8074fd4/config:
