@@ -21,6 +21,9 @@ dotfiles:
   4c761f170e016836ff84498202b99827/.Xmodmap:
     linux:
       path: ~/.Xmodmap
+  4c761f170e016836ff84498202b99827/.proxy_client:
+    linux:
+      path: ~/.proxy_client
   4c761f170e016836ff84498202b99827/.tmux.conf:
     linux:
       path: ~/.tmux.conf
@@ -56,3 +59,6 @@ dotfiles:
       path: ~/.local/share/opencode/auth.json
     windows:
       path: ~\.local\share\opencode\auth.json
+  d3af664e79e608989282aebdd2445220/proxy_client.service:
+    linux:
+      path: ~/.config/systemd/user/proxy_client.service
