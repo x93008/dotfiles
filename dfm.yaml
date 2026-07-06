@@ -27,15 +27,15 @@ dotfiles:
   4c761f170e016836ff84498202b99827/.xprofile:
     linux:
       path: ~/.xprofile
+  4c761f170e016836ff84498202b99827/.zsh:
+    linux:
+      path: ~/.zsh
   4c761f170e016836ff84498202b99827/.zshenv:
     linux:
       path: ~/.zshenv
   4c761f170e016836ff84498202b99827/.zshrc:
     linux:
       path: ~/.zshrc
-  4c761f170e016836ff84498202b99827/antigen.zsh:
-    linux:
-      path: ~/antigen.zsh
   6ee1504095caefc322f5ca38b8074fd4/config:
     linux:
       path: ~/.ssh/config

@@ -1,5 +1,5 @@
 # zsh 插件
-source ~/antigen.zsh
+source ~/.zsh/antigen.zsh
 antigen use oh-my-zsh
 
 antigen bundle git
@@ -33,6 +33,9 @@ antigen bundle skywind3000/z.lua
 # 加载主题
 antigen theme robbyrussell
 
+# 开启vi命令行模式
+antigen bundle vi-mode
+
 
 # 保存更改
 antigen apply
@@ -46,9 +49,6 @@ export EDITOR=nvim
 # 禁用Ctrl+S
 stty ixany
 
-# 使用gi 加c++ Cmake 等，自动生成.gitignore
-function gi() { curl -sLw "\n" https://www.toptal.com/developers/gitignore/api/$@ ;}
-
 # 加载接收端的环境变量
 export LIBVA_DRIVER_NAME=iHD
 export LD_LIBRARY_PATH="."
@@ -60,6 +60,10 @@ export EXCEED_SHARE_DEBUG="TRUE"
 # export ESS_AUTH_TEST="TRUE"
 export EXCEED_SHARE_DEV="TRUE"
 
+
+command -v xdg-open &> /dev/null && alias open="xdg-open"
+# 使用gi CMake产生gitigbore模板
+command -v gibo &> /dev/null && alias gi="gibo dump"
 
 #alias
 alias guml='plantuml -tsvg'
@@ -88,8 +92,6 @@ alias vconan2='source /home/x93008/venv_conan2/bin/activate'
 
 # debuginfo 国内源
 export DEBUGINFOD_URLS="https://repo.archlinuxcn.org"
-
-set -o vi
 
 # 垃圾代理，一堆问题，换回无代理状态
 npm config set --location=user registry=http://r.cnpmjs.org
@@ -121,6 +123,8 @@ if [[ -f $HOME/.config/secret.env ]]; then
         set +a
     fi
 fi
+
+source $HOME/.zsh/config.zsh
 
 # 对PATH环境变量的路径做一次去重
 typeset -U path
