@@ -21,4 +21,4 @@ alias vim='nvim'
 # alias加上空格，shell会自动将后面第一个命令进行别名展开，防止vim别名在sudo时候不生效
 alias sudo='sudo '
 
-alias vconan2='source /home/x93008/venv_conan2/bin/activate'
+alias vconan2="source $HOME/venv_conan2/bin/activate"

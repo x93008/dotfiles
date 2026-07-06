@@ -12,6 +12,8 @@ export EXCEED_SHARE_DEBUG="TRUE"
 # export ESS_AUTH_TEST="TRUE"
 export EXCEED_SHARE_DEV="TRUE"
 
+export ESS_TEST=1
+
 # 默认打开代理
 # 本机即 PROXY_SERVER_IP 时走 127.0.0.1，否则走远程 PROXY_SERVER_IP
 if ip -4 addr 2>/dev/null | grep -qwF "$PROXY_SERVER_IP"; then
@@ -31,20 +33,8 @@ source $HOME/.zsh/alias.zsh
 # gibo completion zsh > gibo.zsh生成，用于gibo补全
 source $HOME/.zsh/gibo.zsh
 
-# 垃圾代理，一堆问题，换回无代理状态
-npm config set --location=user registry=http://r.cnpmjs.org
-
-if [ $MODMAP_SET ]; then
-elif [ "$XDG_SESSION_TYPE" = "x11" ]; then
-  echo $XDG_SESSION_TYPE
-  export MODMAP_SET=1
-  xmodmap ~/.Xmodmap
-else
-  # 取消xmodmap映射
-  echo $XDG_SESSION_TYPE
-  export MODMAP_SET=1
-  setxkbmap
-fi
+# 加载平台独有设置
+source $HOME/.zsh/$(uname -s)/config.zsh
 
 # 对PATH环境变量的路径做一次去重
 typeset -U path
