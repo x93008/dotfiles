@@ -22,9 +22,13 @@ dotfiles:
     linux:
       path: ~/.Xmodmap
   4c761f170e016836ff84498202b99827/.curlrc:
+    darwin:
+      path: ~/.curlrc
     linux:
       path: ~/.curlrc
   4c761f170e016836ff84498202b99827/.netrc:
+    darwin:
+      path: ~/.netrc
     linux:
       path: ~/.netrc
   4c761f170e016836ff84498202b99827/.proxy_client:
