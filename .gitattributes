@@ -4,3 +4,5 @@
 4d2e5a0220e12f571caf6be67ec64ec3/.npmrc filter=git-crypt diff=git-crypt
 d3af664e79e608989282aebdd2445220/proxy_client.service filter=git-crypt diff=git-crypt
 4c761f170e016836ff84498202b99827/.proxy_client/** filter=git-crypt diff=git-crypt
+4c761f170e016836ff84498202b99827/.curlrc filter=git-crypt diff=git-crypt
+4c761f170e016836ff84498202b99827/.netrc filter=git-crypt diff=git-crypt
