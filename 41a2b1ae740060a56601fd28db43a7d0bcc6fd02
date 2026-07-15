@@ -1,0 +1,23 @@
+27506103bd172d804c1c317ed0e335cc/oh-my-opencode-slim.json
+  44b2117b1dc3a447 3-4,6-46,48-64,66-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "41a2b1ae740060a56601fd28db43a7d0bcc6fd02",
+  "prompts": {
+    "44b2117b1dc3a447": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09c5b7b63ffequ4UwzNMGdjtRL",
+        "model": "kimi-for-coding/k2p7"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 213,
+      "total_deletions": 51,
+      "accepted_lines": 173,
+      "overriden_lines": 1
+    }
+  }
+}
