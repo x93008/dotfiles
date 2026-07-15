@@ -1,8 +1,49 @@
 {
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "kimi",
+  "preset": "glm",
   "disabled_agents": [],
   "presets": {
+    "glm": {
+      "orchestrator": {
+        "model": "zhipuai-coding-plan/glm-5.1",
+        "skills": ["*"],
+        "mcps": ["*", "!context7"]
+      },
+      "oracle": {
+        "model": "zhipuai-coding-plan/glm-5.2",
+        "variant": "high",
+        "skills": ["simplify"],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "deepseek/deepseek-v4-flash",
+        "skills": [],
+        "mcps": ["websearch", "context7", "gh_grep"]
+      },
+      "explorer": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "zhipuai-coding-plan/glm-5.1",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "opencode/deepseek-v4-flash-free",
+        "variant": "high",
+        "skills": [],
+        "mcps": []
+      },
+      "observer": {
+        "model": "kimi-for-coding/k2p6",
+        "skills": [],
+        "mcps": []
+      },
+      "councillor": { "model": "zhipuai-coding-plan/glm-5.1" }
+    },
     "kimi": {
       "orchestrator": {
         "model": "kimi-for-coding/k2p7",
@@ -43,47 +84,6 @@
         "mcps": []
       },
       "councillor": { "model": "kimi-for-coding/k2p7" }
-    },
-    "glm": {
-      "orchestrator": {
-        "model": "zhipuai-coding-plan/glm-5.1",
-        "skills": ["*"],
-        "mcps": ["*", "!context7"]
-      },
-      "oracle": {
-        "model": "zhipuai-coding-plan/glm-5.2",
-        "variant": "high",
-        "skills": ["simplify"],
-        "mcps": []
-      },
-      "librarian": {
-        "model": "opencode/deepseek-v4-flash-free",
-        "skills": [],
-        "mcps": ["websearch", "context7", "gh_grep"]
-      },
-      "explorer": {
-        "model": "opencode-go/deepseek-v4-flash",
-        "skills": [],
-        "mcps": []
-      },
-      "designer": {
-        "model": "zhipuai-coding-plan/glm-5.1",
-        "variant": "medium",
-        "skills": [],
-        "mcps": []
-      },
-      "fixer": {
-        "model": "opencode/deepseek-v4-flash-free",
-        "variant": "high",
-        "skills": [],
-        "mcps": []
-      },
-      "observer": {
-        "model": "kimi-for-coding/k2p6",
-        "skills": [],
-        "mcps": []
-      },
-      "councillor": { "model": "zhipuai-coding-plan/glm-5.1" }
     }
   }
 }
