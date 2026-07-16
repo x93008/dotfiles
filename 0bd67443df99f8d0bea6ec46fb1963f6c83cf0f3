@@ -1,0 +1,25 @@
+27506103bd172d804c1c317ed0e335cc/oh-my-opencode-slim.json
+  2fdca3a5cb70b3f6 87-125
+27506103bd172d804c1c317ed0e335cc/opencode.jsonc
+  2fdca3a5cb70b3f6 8-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "0bd67443df99f8d0bea6ec46fb1963f6c83cf0f3",
+  "prompts": {
+    "2fdca3a5cb70b3f6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_09746a002ffeRPO5sTHOKuGoIb",
+        "model": "zhipuai-coding-plan/glm-5.1"
+      },
+      "human_author": "x93008 <x93008@163.com>",
+      "messages": [],
+      "total_additions": 51,
+      "total_deletions": 1,
+      "accepted_lines": 50,
+      "overriden_lines": 0
+    }
+  }
+}
