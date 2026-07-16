@@ -84,6 +84,45 @@
         "mcps": []
       },
       "councillor": { "model": "kimi-for-coding/k2p7" }
+    },
+    "openai": {
+      "orchestrator": {
+        "model": "xyz1001/gpt-5.6-terra",
+        "variant": "medium",
+        "skills": ["*"],
+        "mcps": ["*", "!context7"]
+      },
+      "oracle": {
+        "model": "xyz1001/gpt-5.6-sol",
+        "variant": "high",
+        "skills": ["simplify"],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "xyz1001/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": ["websearch", "context7", "gh_grep"]
+      },
+      "explorer": {
+        "model": "xyz1001/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "xyz1001/gpt-5.6-luna",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "xyz1001/gpt-5.6-luna",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "councillor": { "model": "zhipuai-coding-plan/glm-5.2" }
     }
   }
 }
