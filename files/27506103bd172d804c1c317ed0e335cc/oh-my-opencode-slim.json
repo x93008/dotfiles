@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "glm",
+  "preset": "balanced",
   "disabled_agents": [],
   "presets": {
     "glm": {
@@ -123,6 +123,46 @@
         "mcps": []
       },
       "councillor": { "model": "zhipuai-coding-plan/glm-5.2" }
+    },
+    "balanced": {
+      "orchestrator": {
+        "model": "zhipuai-coding-plan/glm-5.2",
+        "skills": ["*"],
+        "mcps": ["*", "!context7"]
+      },
+      "oracle": {
+        "model": "opencode-go/qwen3.7-max",
+        "variant": "high",
+        "skills": ["simplify"],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "opencode-go/qwen3.6-plus",
+        "skills": [],
+        "mcps": ["websearch", "context7", "gh_grep"]
+      },
+      "explorer": {
+        "model": "opencode-go/deepseek-v4-flash",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "kimi-for-coding/k2p6",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "kimi-for-coding/k2p7",
+        "variant": "high",
+        "skills": [],
+        "mcps": []
+      },
+      "observer": {
+        "model": "zhipuai-coding-plan/glm-5v-turbo",
+        "skills": [],
+        "mcps": []
+      },
+      "councillor": { "model": "opencode-go/deepseek-v4-pro" }
     }
   }
 }
