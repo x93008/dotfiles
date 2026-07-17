@@ -124,6 +124,45 @@
       },
       "councillor": { "model": "zhipuai-coding-plan/glm-5.2" }
     },
+    "junhua": {
+      "orchestrator": {
+        "model": "junhua/gpt-5.6-terra",
+        "variant": "medium",
+        "skills": ["*"],
+        "mcps": ["*", "!context7"]
+      },
+      "oracle": {
+        "model": "junhua/gpt-5.6-sol",
+        "variant": "high",
+        "skills": ["simplify"],
+        "mcps": []
+      },
+      "librarian": {
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": ["websearch", "context7", "gh_grep"]
+      },
+      "explorer": {
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "low",
+        "skills": [],
+        "mcps": []
+      },
+      "designer": {
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "fixer": {
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "medium",
+        "skills": [],
+        "mcps": []
+      },
+      "councillor": { "model": "zhipuai-coding-plan/glm-5.2" }
+    },
     "balanced": {
       "orchestrator": {
         "model": "zhipuai-coding-plan/glm-5.2",

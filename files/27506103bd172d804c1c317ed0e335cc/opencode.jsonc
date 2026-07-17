@@ -18,6 +18,26 @@
         }
       }
     },
+    "junhua": {
+      "npm": "@ai-sdk/openai",
+      "options": {
+        "baseURL": "{env:JUNHUA_API_URL}/v1"
+      },
+      "models": {
+        "gpt-image-2": {
+          "name": "GPT Image 2"
+        },
+        "gpt-5.6-luna": {
+          "name": "GPT 5.6 Luna"
+        },
+        "gpt-5.6-sol": {
+          "name": "GPT 5.6 Sol"
+        },
+        "gpt-5.6-terra": {
+          "name": "GPT 5.6 Terra"
+        }
+      }
+    },
     "friendmlx": {
       "npm": "@ai-sdk/openai",
       "name": "Friend MLX",
