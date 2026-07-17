@@ -46,34 +46,34 @@
     },
     "kimi": {
       "orchestrator": {
-        "model": "kimi-for-coding/k2p7",
+        "model": "kimi-for-coding/k3",
         "skills": ["*"],
         "mcps": ["*", "!context7"]
       },
       "oracle": {
-        "model": "kimi-for-coding/k2p7",
+        "model": "kimi-for-coding/k3",
         "variant": "high",
         "skills": ["simplify"],
         "mcps": []
       },
       "librarian": {
-        "model": "opencode-go/deepseek-v4-flash",
+        "model": "kimi-for-coding/kimi-for-coding-highspeed",
         "skills": [],
         "mcps": ["websearch", "context7", "gh_grep"]
       },
       "explorer": {
-        "model": "opencode-go/deepseek-v4-flash",
+        "model": "kimi-for-coding/kimi-for-coding-highspeed",
         "skills": [],
         "mcps": []
       },
       "designer": {
-        "model": "opencode-go/glm-5.1",
+        "model": "kimi-for-coding/k2p7",
         "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "opencode-go/glm-5.1",
+        "model": "kimi-for-coding/k2p7",
         "variant": "high",
         "skills": [],
         "mcps": []
@@ -83,7 +83,7 @@
         "skills": [],
         "mcps": []
       },
-      "councillor": { "model": "kimi-for-coding/k2p7" }
+      "councillor": { "model": "kimi-for-coding/k3" }
     },
     "openai": {
       "orchestrator": {
