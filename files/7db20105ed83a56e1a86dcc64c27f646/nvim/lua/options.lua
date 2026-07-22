@@ -8,6 +8,13 @@ vim.g.maplocalleader = ";" -- 分号作为 local leader 键
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
+-- 识别 .uml 后缀为 plantuml 文件类型（nvim 默认不识别 .uml）
+vim.filetype.add({
+    extension = {
+        uml = "plantuml",
+    },
+})
+
 -- 启用 24-bit 颜色 (nvim-tree 推荐，用于更好的图标显示)
 vim.opt.termguicolors = true
 

@@ -70,3 +70,15 @@ vim.keymap.set({ "n", "v" }, "<C-n>", ":Format<CR>", {
     desc = "[C]ode [F]ormat",
     silent = true,
 })
+
+-- plantuml.nvim: plantuml 文件中按 leader o 在浏览器打开实时预览
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "plantuml",
+    callback = function(args)
+        vim.keymap.set("n", "<leader>o", ":PlantumlLaunchBrowser<CR>", {
+            buffer = args.buf,
+            desc = "PlantUML 浏览器实时预览",
+            silent = true,
+        })
+    end,
+})
