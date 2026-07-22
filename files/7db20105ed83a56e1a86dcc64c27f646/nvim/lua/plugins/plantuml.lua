@@ -1,12 +1,10 @@
 return {
-    -- plantuml.nvim: 浏览器实时预览 PlantUML 图（WebSocket 自动更新）
-    "charlesnicholson/plantuml.nvim",
+    -- plantuml-previewer.vim: 浏览器实时预览 PlantUML 图，本地渲染，保存自动刷新
+    -- 需要下载graphviz应用，并确保有java环境
+    "weirongxu/plantuml-previewer.vim",
     ft = "plantuml",
-    opts = {
-        -- 默认走公共 PlantUML Server，无需本地 Java/plantuml.jar
-        -- 敏感内容可改用 Docker 本地 Server：
-        -- use_docker = true,
-        -- docker_image = "plantuml/plantuml-server:jetty",
-        -- docker_port = 8080,
-    },
+    dependencies = {
+        "tyru/open-browser.vim", -- 打开浏览器
+        "aklt/plantuml-syntax", -- PlantUML 语法高亮
+    }
 }

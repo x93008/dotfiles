@@ -71,11 +71,11 @@ vim.keymap.set({ "n", "v" }, "<C-n>", ":Format<CR>", {
     silent = true,
 })
 
--- plantuml.nvim: plantuml 文件中按 leader o 在浏览器打开实时预览
+-- plantuml-previewer.vim: plantuml 文件中按 leader o 在浏览器打开实时预览（保存自动刷新）
 vim.api.nvim_create_autocmd("FileType", {
     pattern = "plantuml",
     callback = function(args)
-        vim.keymap.set("n", "<leader>o", ":PlantumlLaunchBrowser<CR>", {
+        vim.keymap.set("n", "<leader>o", ":PlantumlOpen<CR>", {
             buffer = args.buf,
             desc = "PlantUML 浏览器实时预览",
             silent = true,
