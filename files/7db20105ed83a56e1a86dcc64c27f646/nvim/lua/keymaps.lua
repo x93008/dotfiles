@@ -82,3 +82,15 @@ vim.api.nvim_create_autocmd("FileType", {
         })
     end,
 })
+
+-- markdown-preview.nvim: markdown 文件中按 leader o 打开浏览器预览
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "markdown",
+    callback = function(args)
+        vim.keymap.set("n", "<leader>o", ":MarkdownPreview<CR>", {
+            buffer = args.buf,
+            desc = "Markdown 浏览器预览",
+            silent = true,
+        })
+    end,
+})
