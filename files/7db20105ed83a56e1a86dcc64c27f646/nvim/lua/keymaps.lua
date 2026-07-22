@@ -94,3 +94,15 @@ vim.api.nvim_create_autocmd("FileType", {
         })
     end,
 })
+
+-- mermaid.nvim: mermaid 文件中按 leader o 打开浏览器实时预览
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = "mermaid",
+    callback = function(args)
+        vim.keymap.set("n", "<leader>o", ":MermaidPreview<CR>", {
+            buffer = args.buf,
+            desc = "Mermaid 浏览器实时预览",
+            silent = true,
+        })
+    end,
+})
