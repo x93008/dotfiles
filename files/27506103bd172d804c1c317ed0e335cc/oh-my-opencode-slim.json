@@ -161,7 +161,7 @@
         "skills": [],
         "mcps": []
       },
-      "councillor": { "model": "zhipuai-coding-plan/glm-5.2" }
+      "councillor": { "model": "junhua/gpt-5.6-sol" }
     },
     "balanced": {
       "orchestrator": {
