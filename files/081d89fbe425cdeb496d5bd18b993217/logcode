@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Usage: ./log.sh <log_code>
+# Downloads the log file corresponding to the given log code.
+
+set -euo pipefail
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 <log_code>"
+    exit 1
+fi
+
+LOG_CODE="$1"
+API_BASE="https://account-cloud.bytello.com/api/v1/log/getDownloadUrl"
+
+echo "[1/2] Fetching download URL for log code: ${LOG_CODE} ..."
+
+RESPONSE=$(curl -sS --location \
+    -X GET \
+    "${API_BASE}?code=${LOG_CODE}" \
+    -H 'Content-Type: application/json' \
+    -H 'x-auth-refer: EasiNoteWeb')
+
+echo "Response: ${RESPONSE}"
+
+# Extract the download URL from JSON response.
+# Try jq first; fall back to python3 if jq is not available.
+if command -v jq &>/dev/null; then
+    DOWNLOAD_URL=$(echo "${RESPONSE}" | jq -r '.data // .url // .downloadUrl // empty')
+else
+    DOWNLOAD_URL=$(echo "${RESPONSE}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+# Try common field names
+for key in ('data', 'url', 'downloadUrl', 'download_url'):
+    val = data.get(key)
+    if isinstance(val, str) and val.startswith('http'):
+        print(val)
+        sys.exit(0)
+# If 'data' is a dict, look inside it
+data2 = data.get('data', {})
+if isinstance(data2, dict):
+    for key in ('url', 'downloadUrl', 'download_url'):
+        val = data2.get(key)
+        if isinstance(val, str) and val.startswith('http'):
+            print(val)
+            sys.exit(0)
+sys.exit(1)
+" 2>/dev/null)
+fi
+
+if [[ -z "${DOWNLOAD_URL}" ]]; then
+    echo "Error: Could not extract download URL from response."
+    echo "Raw response: ${RESPONSE}"
+    exit 2
+fi
+
+echo "[2/2] Downloading log file from: ${DOWNLOAD_URL} ..."
+
+# Determine output filename from URL, or default to log_<code>.zip
+FILENAME=$(basename "${DOWNLOAD_URL%%\?*}")
+[[ -z "${FILENAME}" || "${FILENAME}" == "." ]] && FILENAME="log_${LOG_CODE}.zip"
+
+curl -L -o "${FILENAME}" "${DOWNLOAD_URL}"
+
+echo "Done. Saved to: ${FILENAME}"

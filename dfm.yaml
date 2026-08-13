@@ -1,4 +1,9 @@
 dotfiles:
+  081d89fbe425cdeb496d5bd18b993217/logcode:
+    darwin:
+      path: ~/.local/bin/logcode
+    linux:
+      path: ~/.local/bin/logcode
   27506103bd172d804c1c317ed0e335cc/.npmrc:
     darwin:
       path: ~/.config/opencode/.npmrc
