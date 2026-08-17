@@ -128,7 +128,23 @@
       "orchestrator": {
         "model": "junhua/gpt-5.6-sol",
         "variant": "max",
-        "skills": ["*"],
+        "skills": [
+          "*",
+          "!brainstorming",
+          "!dispatching-parallel-agents",
+          "!executing-plans",
+          "!finishing-a-development-branch",
+          "!receiving-code-review",
+          "!requesting-code-review",
+          "!subagent-driven-development",
+          "!systematic-debugging",
+          "!test-driven-development",
+          "!using-git-worktrees",
+          "!using-superpowers",
+          "!verification-before-completion",
+          "!writing-plans",
+          "!writing-skills"
+        ],
         "mcps": ["*", "!context7"]
       },
       "oracle": {
