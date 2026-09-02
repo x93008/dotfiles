@@ -7,3 +7,4 @@ files/4c761f170e016836ff84498202b99827/.proxy_client/** filter=git-crypt diff=gi
 files/4c761f170e016836ff84498202b99827/.curlrc filter=git-crypt diff=git-crypt
 files/4c761f170e016836ff84498202b99827/.netrc filter=git-crypt diff=git-crypt
 secret/** filter=git-crypt diff=git-crypt
+files/352e94307be39438fc0a715fa2f7e830/config.xml filter=git-crypt diff=git-crypt
