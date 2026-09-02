@@ -23,6 +23,11 @@ dotfiles:
       path: ~/.config/opencode/opencode.jsonc
     windows:
       path: ~/.config/opencode/opencode.jsonc
+  352e94307be39438fc0a715fa2f7e830/config.xml:
+    darwin:
+      path: ~/.clickhouse-client/config.xml
+    linux:
+      path: ~/.clickhouse-client/config.xml
   4c761f170e016836ff84498202b99827/.Xmodmap:
     linux:
       path: ~/.Xmodmap
