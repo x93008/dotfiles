@@ -12,7 +12,12 @@ export EXCEED_SHARE_DEV="TRUE"
 export ESS_TEST=1
 
 # 加载代理设置
-source $HOME/.zsh/proxy.zsh
+# 防止未解密导致source报错
+if [[ -f "$HOME/.zsh/proxy.zsh" ]]; then
+  if file -L -b "$HOME/.zsh/proxy.zsh" | grep -q "ASCII\|text"; then
+    source "$HOME/.zsh/proxy.zsh"
+  fi
+fi
 
 # debuginfo 国内源
 export DEBUGINFOD_URLS="https://repo.archlinuxcn.org"
