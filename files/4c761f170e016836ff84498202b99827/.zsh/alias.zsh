@@ -8,7 +8,6 @@ alias guml='plantuml -tsvg'
 alias mj='make -j8'
 
 alias socks5proxy='export http_proxy=socks5://127.0.0.1:1080;export https_proxy=socks5://127.0.0.1:1080'
-export no_proxy=artifactory.gz.cvte.cn
 alias httpproxy="export http_proxy=http://$PROXY_HOST:10800; export https_proxy=\$http_proxy"
 alias proxyoff='unset http_proxy; unset https_proxy'
 
