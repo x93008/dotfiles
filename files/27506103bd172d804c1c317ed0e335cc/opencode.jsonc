@@ -1,9 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "provider": {
+  "providers": {
     "xyz1001": {
-      "npm": "@ai-sdk/openai",
-      "options": {
+      "package": "aisdk:@ai-sdk/openai",
+      "settings": {
         "baseURL": "{env:XYZ1001_API_URL}/v1"
       },
       "models": {
@@ -19,8 +19,8 @@
       }
     },
     "junhua": {
-      "npm": "@ai-sdk/openai",
-      "options": {
+      "package": "aisdk:@ai-sdk/openai",
+      "settings": {
         "baseURL": "{env:JUNHUA_API_URL}/v1"
       },
       "models": {
@@ -32,26 +32,41 @@
         },
         "gpt-5.6-sol": {
           "name": "GPT 5.6 Sol",
-          "options": {
+          "settings": {
             "reasoningEffort": "max"
           },
-          "variants": {
-            "low": {
-              "reasoningEffort": "low"
+          "variants": [
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
             },
-            "medium": {
-              "reasoningEffort": "medium"
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
             },
-            "high": {
-              "reasoningEffort": "high"
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
             },
-            "xhigh": {
-              "reasoningEffort": "xhigh"
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
             },
-            "max": {
-              "reasoningEffort": "max"
+            {
+              "id": "max",
+              "settings": {
+                "reasoningEffort": "max"
+              }
             }
-          }
+          ]
         },
         "gpt-5.6-terra": {
           "name": "GPT 5.6 Terra"
@@ -59,9 +74,9 @@
       }
     },
     "friendmlx": {
-      "npm": "@ai-sdk/openai",
+      "package": "aisdk:@ai-sdk/openai",
       "name": "Friend MLX",
-      "options": {
+      "settings": {
         "baseURL": "http://120.48.144.58:8901/v1",
         "apiKey": "{env:FRIEND_MLX_API_KEY}"
       },
@@ -73,12 +88,14 @@
     }
   },
   "mcp": {
-    "chrome-devtools": {
-      "type": "local",
-      "command": ["npx", "chrome-devtools-mcp@latest", "--autoConnect"]
+    "servers": {
+      "chrome-devtools": {
+        "type": "local",
+        "command": ["npx", "chrome-devtools-mcp@latest", "--autoConnect"]
+      }
     }
   },
-  "plugin": [
+  "plugins": [
     "superpowers@git+https://github.com/obra/superpowers.git",
     "oh-my-opencode-slim"
   ]
