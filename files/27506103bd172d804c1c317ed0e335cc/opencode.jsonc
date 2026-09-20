@@ -21,7 +21,7 @@
     "junhua": {
       "package": "aisdk:@ai-sdk/openai",
       "settings": {
-        "baseURL": "{env:JUNHUA_API_URL}/v1"
+        "baseURL": "https://openai.kadocai.uk/v1"
       },
       "models": {
         "gpt-image-2": {
