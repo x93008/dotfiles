@@ -82,13 +82,6 @@ dotfiles:
       path: ~/.config/secret.env
     linux:
       path: ~/.config/secret.env
-  7ee7766eae7c257dd5af33aceeb4af35/auth.json:
-    darwin:
-      path: ~/.local/share/opencode/auth.json
-    linux:
-      path: ~/.local/share/opencode/auth.json
-    windows:
-      path: ~/.local/share/opencode/auth.json
   d3af664e79e608989282aebdd2445220/proxy_client.service:
     linux:
       path: ~/.config/systemd/user/proxy_client.service
