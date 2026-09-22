@@ -1,0 +1,2947 @@
+#!/usr/bin/env python3
+# FIGMA_API_INSTALL_MARKER: figma-api-python-v3-read-only
+"""Cross-platform, read-only Figma REST API command-line client.
+
+Python 3.9+ and the standard library are sufficient.  The module is also
+importable: networking and command dispatch only happen from ``main``.
+"""
+
+from __future__ import annotations
+
+import base64
+import contextlib
+import getpass
+import hashlib
+import http.client
+import io
+import json
+import mimetypes
+import os
+import re
+import socket
+import stat
+import sys
+import tempfile
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, unquote, unquote_plus, urlencode, urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
+
+
+PROGRAM = "figma-api"
+API_BASE = "https://api.figma.com/v1"
+USER_AGENT = "figma-api-python/3.0"
+DEFAULT_TIMEOUT = 30.0
+INSTALL_MARKER_LINE = "# FIGMA_API_INSTALL_MARKER: figma-api-python-v3-read-only"
+
+EXIT_USAGE = 2
+EXIT_AUTH = 3
+EXIT_HTTP = 4
+EXIT_FILE = 5
+
+
+class CliError(Exception):
+    """An expected error with a stable process exit category."""
+
+    def __init__(self, message: str, code: int) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+
+
+class UsageError(CliError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message, EXIT_USAGE)
+
+
+class AuthError(CliError):
+    def __init__(self, message: str, status: Optional[int] = None, detail: str = "") -> None:
+        super().__init__(message, EXIT_AUTH)
+        # Keep the HTTP status as structured data so callers never need to
+        # infer authorization outcomes by parsing a human-readable message.
+        self.status = status
+        self.http_status = status
+        # API-provided detail is stored only after _safe_api_detail processing.
+        self.detail = detail
+
+
+class ApiError(CliError):
+    def __init__(self, message: str, status: Optional[int] = None) -> None:
+        super().__init__(message, EXIT_HTTP)
+        self.status = status
+        self.http_status = status
+
+
+class FileOperationError(CliError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message, EXIT_FILE)
+
+
+def eprint(*values: object) -> None:
+    print(*values, file=sys.stderr)
+
+
+def text(value: Any) -> str:
+    return "" if value is None else str(value)
+
+
+def as_dict(value: Any) -> Dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def as_list(value: Any) -> List[Any]:
+    return value if isinstance(value, list) else []
+
+
+def token_path(home: Optional[Path] = None) -> Path:
+    return (home if home is not None else Path.home()) / ".config" / "figma" / "token"
+
+
+def mask_token(token: str) -> str:
+    """Mask a token without exposing overlapping portions of short values."""
+    value = token.strip()
+    if not value:
+        return "(empty)"
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", value):
+        return "*" * min(max(len(value), 1), 12)
+    if len(value) <= 12:
+        return "*" * len(value)
+    return value[:8] + "..." + value[-4:]
+
+
+@dataclass(frozen=True)
+class ParsedFigmaUrl:
+    file_key: str
+    node_id: str = ""
+
+
+VALID_FIGMA_HOSTS = {"figma.com", "www.figma.com"}
+
+
+def normalize_url_node_id(value: str) -> str:
+    # Query parsing has already decoded %3A/%3B.  Figma share links represent
+    # ordinary IDs as X-Y while API IDs use X:Y.
+    return value.replace("-", ":")
+
+
+def parse_figma_url(url: str) -> ParsedFigmaUrl:
+    """Strictly parse a Figma /design/ or legacy /file/ URL."""
+    if not url:
+        raise UsageError("Figma URL is required.")
+    try:
+        parsed = urlsplit(url)
+        host = parsed.hostname.lower() if parsed.hostname else ""
+        # Accessing .port also detects malformed/non-numeric ports.
+        port = parsed.port
+    except (ValueError, AttributeError) as exc:
+        raise UsageError("Invalid Figma URL.") from exc
+    if parsed.scheme.lower() not in {"http", "https"}:
+        raise UsageError("Invalid Figma URL: expected http:// or https://.")
+    if host not in VALID_FIGMA_HOSTS or parsed.username or parsed.password or port is not None:
+        raise UsageError("Not a valid figma.com URL.")
+
+    match = re.match(r"^/(?:design|file)/([^/]+)(?:/.*)?$", parsed.path)
+    if not match:
+        raise UsageError("Invalid Figma URL: expected /design/FILE_KEY or /file/FILE_KEY.")
+    # URL path segments are intentionally decoded by hand only after the host
+    # and path shape have been accepted.
+    file_key = unquote(match.group(1)).strip()
+    if not file_key or "/" in file_key or "\\" in file_key:
+        raise UsageError("Invalid Figma URL: file key is missing or malformed.")
+
+    node_id = ""
+    # Split only on '&'.  Older Python 3.9 patch levels may treat ';' as a
+    # query separator, but raw semicolons are meaningful in Instance IDs.
+    for field in parsed.query.split("&"):
+        raw_key, separator, raw_value = field.partition("=")
+        if separator and unquote_plus(raw_key) == "node-id":
+            node_id = normalize_url_node_id(unquote_plus(raw_value).strip())
+            break
+    return ParsedFigmaUrl(file_key=file_key, node_id=node_id)
+
+
+def urlencode_node_id(node_id: str) -> str:
+    """Encode a node ID as expected by Figma query parameters."""
+    return quote(node_id, safe="")
+
+
+def looks_like_url(value: str) -> bool:
+    return value.lower().startswith(("http://", "https://")) or "://" in value
+
+
+def validate_identifier(value: str, label: str) -> str:
+    value = value.strip()
+    if not value:
+        raise UsageError("{} is required.".format(label))
+    if any(ord(char) < 32 for char in value):
+        raise UsageError("{} contains invalid control characters.".format(label))
+    return value
+
+
+def get_file_key(value: str) -> str:
+    if looks_like_url(value):
+        return parse_figma_url(value).file_key
+    return validate_identifier(value, "file key")
+
+
+def parse_file_and_node(values: Sequence[str], command: str) -> Tuple[str, str, List[str]]:
+    if not values:
+        raise UsageError("{} requires a Figma URL, or a file key and node ID.".format(command))
+    first = values[0]
+    if looks_like_url(first):
+        parsed = parse_figma_url(first)
+        if not parsed.node_id:
+            raise UsageError(
+                "node-id is required; include ?node-id=X-Y in the URL or pass file_key and node_id separately."
+            )
+        return parsed.file_key, parsed.node_id, list(values[1:])
+    if len(values) < 2:
+        raise UsageError("{} requires both file_key and node_id.".format(command))
+    return (
+        validate_identifier(first, "file key"),
+        validate_identifier(values[1], "node ID"),
+        list(values[2:]),
+    )
+
+
+def endpoint_segment(value: str) -> str:
+    return quote(validate_identifier(value, "identifier"), safe="")
+
+
+def _safe_api_detail(value: Any, token: str) -> str:
+    detail = "".join(character if character.isprintable() else " " for character in text(value)).strip()
+    if token:
+        detail = detail.replace(token, "[REDACTED]")
+    return detail[:300]
+
+
+def _auth_api_message(status: int, detail: str) -> str:
+    if detail:
+        return "Figma API HTTP {}: {}".format(status, detail)
+    category = "authentication failed" if status == 401 else "authorization failed"
+    return "Figma API HTTP {}: {}".format(status, category)
+
+
+def _url_origin(url: str) -> Tuple[str, str, int]:
+    """Return a normalized (scheme, host, port) origin or raise ApiError."""
+    try:
+        parsed = urlsplit(url)
+        scheme = parsed.scheme.lower()
+        host = parsed.hostname.lower() if parsed.hostname else ""
+        port = parsed.port
+    except (ValueError, AttributeError) as exc:
+        raise ApiError("Figma API redirect target is malformed.") from exc
+    if scheme not in {"http", "https"} or not host or parsed.username or parsed.password:
+        raise ApiError("Figma API redirect target is not a safe HTTP origin.")
+    if port is None:
+        port = 443 if scheme == "https" else 80
+    return scheme, host, port
+
+
+class SafeApiRedirectHandler(HTTPRedirectHandler):
+    """Allow API redirects only within the exact origin and never downgrade TLS."""
+
+    def redirect_request(
+        self,
+        request: Request,
+        file_pointer: Any,
+        code: int,
+        message: str,
+        headers: Mapping[str, str],
+        new_url: str,
+    ) -> Optional[Request]:
+        old_origin = _url_origin(request.full_url)
+        new_origin = _url_origin(new_url)
+        if old_origin[0] == "https" and new_origin[0] != "https":
+            raise ApiError("Refusing HTTPS-to-HTTP redirect for an authenticated Figma API request.")
+        if old_origin != new_origin:
+            raise ApiError("Refusing cross-origin redirect for an authenticated Figma API request.")
+        redirected = super().redirect_request(request, file_pointer, code, message, headers, new_url)
+        if redirected is None:
+            return None
+        if redirected.get_method() != "GET":
+            raise ApiError("Refusing redirect that changes the Figma API request method.")
+        return redirected
+
+
+def build_safe_api_opener() -> Callable[..., Any]:
+    """Create the authenticated API opener with the restricted redirect policy."""
+    return build_opener(SafeApiRedirectHandler()).open
+
+
+class FigmaClient:
+    """Small urllib-based client.  Every API operation is a GET."""
+
+    def __init__(
+        self,
+        token: str,
+        timeout: float = DEFAULT_TIMEOUT,
+        opener: Optional[Callable[..., Any]] = None,
+    ) -> None:
+        if not token:
+            raise AuthError("Figma token is missing.")
+        if any(ord(character) < 32 or ord(character) == 127 for character in token):
+            raise AuthError("Figma token is malformed.")
+        try:
+            token.encode("ascii")
+        except UnicodeEncodeError:
+            raise AuthError("Figma token is malformed.") from None
+        self._token = token
+        self.timeout = timeout
+        self._opener = opener if opener is not None else build_safe_api_opener()
+
+    @staticmethod
+    def _build_url(endpoint: str, params: Optional[Mapping[str, Any]] = None) -> str:
+        if not endpoint.startswith("/") or endpoint.startswith("//") or "://" in endpoint:
+            raise UsageError("API endpoint must be a path beginning with '/'.")
+        if any(character.isspace() or ord(character) < 32 for character in endpoint):
+            raise UsageError("API endpoint contains invalid whitespace or control characters.")
+        url = API_BASE + endpoint
+        if params:
+            query = urlencode(params, doseq=True)
+            url += ("&" if "?" in url else "?") + query
+        return url
+
+    def get_bytes(
+        self, endpoint: str, params: Optional[Mapping[str, Any]] = None
+    ) -> Tuple[bytes, Mapping[str, str]]:
+        url = self._build_url(endpoint, params)
+        request = Request(
+            url,
+            headers={
+                "X-Figma-Token": self._token,
+                "Accept": "application/json",
+                "User-Agent": USER_AGENT,
+            },
+            method="GET",
+        )
+        try:
+            with self._opener(request, timeout=self.timeout) as response:
+                return response.read(), response.headers
+        except HTTPError as exc:
+            # Consume a small amount so the connection can be reused, but never
+            # echo an untrusted response or request headers.
+            detail = ""
+            try:
+                raw = exc.read(65536)
+                payload = json.loads(raw.decode("utf-8"))
+                if isinstance(payload, dict):
+                    detail = _safe_api_detail(
+                        payload.get("err") or payload.get("error") or payload.get("message"),
+                        self._token,
+                    )
+            except Exception:
+                detail = ""
+            if exc.code in (401, 403):
+                raise AuthError(
+                    _auth_api_message(exc.code, detail),
+                    status=exc.code,
+                    detail=detail,
+                ) from None
+            labels = {
+                404: "Figma resource was not found",
+                429: "Figma rate limit exceeded; retry later",
+            }
+            if 500 <= exc.code <= 599:
+                message = "Figma service error (HTTP {}); retry later".format(exc.code)
+            else:
+                message = "{} (HTTP {})".format(labels.get(exc.code, "Figma API request failed"), exc.code)
+            if detail:
+                message += ": " + detail
+            raise ApiError(message, status=exc.code) from None
+        except (URLError, socket.timeout, TimeoutError, http.client.HTTPException) as exc:
+            reason = getattr(exc, "reason", exc)
+            if isinstance(reason, (socket.timeout, TimeoutError)):
+                raise ApiError("Figma API request timed out.") from None
+            raise ApiError("Figma API network request failed.") from None
+        except OSError:
+            raise ApiError("Figma API network request failed.") from None
+
+    def get_json(self, endpoint: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+        raw, _headers = self.get_bytes(endpoint, params)
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            raise ApiError("Figma API returned invalid JSON.") from None
+        if isinstance(data, dict):
+            err_value = data.get("err")
+            error_value = data.get("error")
+            status = data.get("status")
+            numeric_error_status = (
+                isinstance(status, (int, float)) and not isinstance(status, bool) and status >= 400
+            )
+            if bool(err_value) or bool(error_value) or status is False or numeric_error_status:
+                detail_value = err_value or error_value or data.get("message")
+                if not detail_value and numeric_error_status:
+                    detail_value = "status {}".format(status)
+                detail = _safe_api_detail(detail_value, self._token)
+                status_code = (
+                    int(status)
+                    if numeric_error_status and float(status).is_integer()
+                    else None
+                )
+                if status_code in (401, 403):
+                    raise AuthError(
+                        _auth_api_message(status_code, detail),
+                        status=status_code,
+                        detail=detail,
+                    )
+                raise ApiError(
+                    "Figma API error{}".format(": " + detail if detail else "."),
+                    status=status_code,
+                )
+        return data
+
+
+def load_token(home: Optional[Path] = None, environ: Optional[Mapping[str, str]] = None) -> str:
+    env = os.environ if environ is None else environ
+    value = env.get("FIGMA_TOKEN", "").strip()
+    if value:
+        return value
+    path = token_path(home)
+    try:
+        value = path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        raise AuthError(
+            "Figma token is not configured. Run '{} token set' or set FIGMA_TOKEN.".format(PROGRAM)
+        ) from None
+    except OSError as exc:
+        raise AuthError("Cannot read Figma token file: {}.".format(path)) from exc
+    if not value:
+        raise AuthError("Figma token file is empty: {}.".format(path))
+    return value
+
+
+def atomic_write_bytes(path: Path, data: bytes, mode: Optional[int] = None) -> None:
+    """Write bytes through a same-directory temporary file and os.replace."""
+    parent = path.parent
+    if not parent.is_dir():
+        raise FileOperationError("Output directory does not exist: {}".format(parent))
+    temp_name: Optional[str] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", prefix=".{}-".format(path.name), suffix=".tmp", dir=str(parent), delete=False
+        ) as temp:
+            temp_name = temp.name
+            temp.write(data)
+            temp.flush()
+            os.fsync(temp.fileno())
+        if mode is not None and os.name != "nt":
+            os.chmod(temp_name, mode)
+        os.replace(temp_name, str(path))
+        temp_name = None
+        if mode is not None and os.name != "nt":
+            os.chmod(path, mode)
+    except CliError:
+        raise
+    except OSError as exc:
+        raise FileOperationError("Failed to write file '{}': {}".format(path, exc)) from None
+    finally:
+        if temp_name:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+
+
+@dataclass(frozen=True)
+class DownloadResult:
+    path: Path
+    size: int
+    content_type: str
+    final_url: str
+
+
+@dataclass(frozen=True)
+class StagedDownload:
+    path: Path
+    size: int
+    content_type: str
+    final_url: str
+
+
+def _validate_download_url(url: str) -> None:
+    try:
+        parsed = urlsplit(url)
+    except ValueError as exc:
+        raise FileOperationError("Invalid download URL returned by Figma.") from exc
+    if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+        raise FileOperationError("Invalid download URL returned by Figma.")
+    if any(character.isspace() or ord(character) < 32 for character in url):
+        raise FileOperationError("Invalid download URL returned by Figma.")
+
+
+def download_to_temp(
+    url: str,
+    directory: Path,
+    prefix: str = ".figma-download-",
+    timeout: float = DEFAULT_TIMEOUT,
+    opener: Callable[..., Any] = urlopen,
+) -> StagedDownload:
+    """GET a URL into a random, exclusive temporary file in ``directory``."""
+    _validate_download_url(url)
+    if not directory.is_dir():
+        suggestion = " (Did you mean 'Downloads' with an 's'?)" if directory.name == "Download" else ""
+        raise FileOperationError("Output directory does not exist: {}{}".format(directory, suggestion))
+    safe_prefix = re.sub(r"[^A-Za-z0-9._-]", "_", prefix)[:80] or ".figma-download-"
+    temp_name: Optional[str] = None
+    content_type = ""
+    final_url = url
+    size = 0
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", prefix=safe_prefix, suffix=".tmp", dir=str(directory), delete=False
+        ) as temp:
+            temp_name = temp.name
+            try:
+                request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"}, method="GET")
+                with opener(request, timeout=timeout) as response:
+                    content_type = text(response.headers.get("Content-Type", "")).split(";", 1)[0].strip().lower()
+                    geturl = getattr(response, "geturl", None)
+                    if callable(geturl):
+                        final_url = text(geturl()) or url
+                    while True:
+                        chunk = response.read(1024 * 128)
+                        if not chunk:
+                            break
+                        temp.write(chunk)
+                        size += len(chunk)
+            except HTTPError as exc:
+                raise FileOperationError("Download failed (HTTP {}).".format(exc.code)) from None
+            except (URLError, socket.timeout, TimeoutError, OSError, ValueError, http.client.HTTPException):
+                raise FileOperationError("Download network request failed.") from None
+            temp.flush()
+            os.fsync(temp.fileno())
+        if size <= 0:
+            raise FileOperationError("Download failed: received an empty file.")
+        staged_path = Path(temp_name)
+        temp_name = None
+        return StagedDownload(staged_path, size, content_type, final_url)
+    except CliError:
+        raise
+    except OSError as exc:
+        raise FileOperationError("Failed to stage download: {}".format(exc)) from None
+    finally:
+        if temp_name:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
+
+
+def remove_staged_download(staged: StagedDownload) -> None:
+    try:
+        staged.path.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
+
+
+def commit_staged_download(
+    staged: StagedDownload, destination: Path, mode: int = 0o644
+) -> DownloadResult:
+    """Atomically install a validated same-directory download."""
+    parent = destination.parent
+    if not parent.is_dir():
+        raise FileOperationError("Output directory does not exist: {}".format(parent))
+    try:
+        if not os.path.samefile(str(staged.path.parent), str(parent)):
+            raise FileOperationError("Staged download is not in the destination directory.")
+        if os.name != "nt":
+            os.chmod(staged.path, mode)
+        os.replace(str(staged.path), str(destination))
+    except CliError:
+        raise
+    except OSError as exc:
+        raise FileOperationError("Failed to save download '{}': {}".format(destination, exc)) from None
+    return DownloadResult(destination, staged.size, staged.content_type, staged.final_url)
+
+
+def download_atomic(
+    url: str,
+    destination: Path,
+    timeout: float = DEFAULT_TIMEOUT,
+    opener: Callable[..., Any] = urlopen,
+) -> DownloadResult:
+    """Stage a non-empty GET in the target directory, then atomically install it."""
+    staged = download_to_temp(
+        url,
+        destination.parent,
+        prefix=".{}-".format(destination.name),
+        timeout=timeout,
+        opener=opener,
+    )
+    try:
+        return commit_staged_download(staged, destination)
+    finally:
+        remove_staged_download(staged)
+
+
+def format_size(size: int) -> str:
+    if size < 1024:
+        return "{} B".format(size)
+    if size < 1024 * 1024:
+        return "{:.1f} KiB".format(size / 1024.0)
+    return "{:.1f} MiB".format(size / (1024.0 * 1024.0))
+
+
+def _read_file_edges(path: Path, head_limit: int = 262144, tail_limit: int = 65536) -> Tuple[bytes, bytes]:
+    try:
+        with path.open("rb") as stream:
+            head = stream.read(head_limit)
+            stream.seek(0, os.SEEK_END)
+            size = stream.tell()
+            stream.seek(max(0, size - tail_limit), os.SEEK_SET)
+            tail = stream.read(tail_limit)
+        return head, tail
+    except OSError as exc:
+        raise FileOperationError("Cannot inspect staged download: {}".format(exc)) from None
+
+
+def _looks_like_svg(head: bytes, tail: bytes) -> bool:
+    try:
+        source = head.decode("utf-8-sig")
+        ending = tail.decode("utf-8", "ignore")
+    except UnicodeDecodeError:
+        return False
+    source = source.lstrip()
+    # Permit ordinary XML declarations, comments, and a simple doctype before
+    # the root element without accepting arbitrary HTML containing an SVG.
+    for _unused in range(8):
+        if source.startswith("<?"):
+            end = source.find("?>")
+            if end < 0:
+                return False
+            source = source[end + 2 :].lstrip()
+            continue
+        if source.startswith("<!--"):
+            end = source.find("-->")
+            if end < 0:
+                return False
+            source = source[end + 3 :].lstrip()
+            continue
+        if source[:9].upper() == "<!DOCTYPE":
+            end = source.find(">")
+            if end < 0:
+                return False
+            source = source[end + 1 :].lstrip()
+            continue
+        break
+    root = re.match(r"<svg(?:\s|/?>)", source, re.IGNORECASE)
+    if root is None:
+        return False
+    opening_end = source.find(">", root.start())
+    if opening_end >= 0 and source[:opening_end].rstrip().endswith("/"):
+        return True
+    return re.search(r"</svg\s*>", source + ending, re.IGNORECASE) is not None
+
+
+def validate_export_content(staged: StagedDownload, image_format: str) -> Tuple[bool, str]:
+    """Validate a staged export by format signature/structure, independent of size."""
+    if staged.size <= 0:
+        return False, "empty response"
+    head, tail = _read_file_edges(staged.path)
+    normalized_type = staged.content_type.lower().split(";", 1)[0].strip()
+    if normalized_type in {"application/json", "text/json", "text/html", "application/xhtml+xml"}:
+        return False, "unexpected {} response".format(normalized_type)
+    normalized_format = image_format.lower()
+    if normalized_format == "png":
+        valid = head.startswith(b"\x89PNG\r\n\x1a\n") and head[12:16] == b"IHDR" and b"IEND" in tail
+        return valid, "invalid PNG signature or chunk structure"
+    if normalized_format in {"jpg", "jpeg"}:
+        valid = head.startswith(b"\xff\xd8\xff") and b"\xff\xd9" in tail[-32:]
+        return valid, "invalid JPEG markers"
+    if normalized_format == "pdf":
+        valid = head.lstrip().startswith(b"%PDF-") and b"%%EOF" in tail
+        return valid, "invalid PDF header or trailer"
+    if normalized_format == "svg":
+        valid = _looks_like_svg(head, tail)
+        return valid, "invalid SVG root structure"
+    # Future formats remain usable when the response is non-empty and does not
+    # advertise a common API/HTML error content type.
+    return True, ""
+
+
+def extract_image_entry(response: Any, excluded_ids: Optional[Set[str]] = None) -> Tuple[str, str]:
+    images = as_dict(as_dict(response).get("images"))
+    excluded = excluded_ids or set()
+    for node_id, value in images.items():
+        if text(node_id) not in excluded and isinstance(value, str) and value and value != "null":
+            return text(node_id), value
+    return "", ""
+
+
+def extract_image_entries(response: Any, excluded_ids: Optional[Set[str]] = None) -> List[Tuple[str, str]]:
+    images = as_dict(as_dict(response).get("images"))
+    excluded = excluded_ids or set()
+    return [
+        (text(node_id), value)
+        for node_id, value in images.items()
+        if text(node_id) not in excluded and isinstance(value, str) and value and value != "null"
+    ]
+
+
+def extract_image_url(response: Any) -> str:
+    """Return the first non-null URL from an Images API response."""
+    if isinstance(response, str):
+        try:
+            response = json.loads(response)
+        except json.JSONDecodeError:
+            return ""
+    return extract_image_entry(response)[1]
+
+
+def dedup_layout_children(children: Iterable[Any]) -> List[Dict[str, Any]]:
+    """Drop invisible nodes and only exact duplicate, non-empty node IDs."""
+    seen_ids: Set[str] = set()
+    result: List[Dict[str, Any]] = []
+    for raw in children:
+        if not isinstance(raw, dict) or raw.get("visible") is False:
+            continue
+        node_id = text(raw.get("id")).strip()
+        if node_id:
+            if node_id in seen_ids:
+                continue
+            seen_ids.add(node_id)
+        result.append(raw)
+    return result
+
+
+def filtered_layout_children(node: Mapping[str, Any]) -> List[Dict[str, Any]]:
+    return dedup_layout_children(as_list(node.get("children")))
+
+
+def filter_layout_tree(node: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(node, dict) or node.get("visible") is False:
+        return None
+    output = {key: value for key, value in node.items() if key != "children"}
+    children: List[Dict[str, Any]] = []
+    for child in filtered_layout_children(node):
+        filtered = filter_layout_tree(child)
+        if filtered is not None:
+            children.append(filtered)
+    if children:
+        output["children"] = children
+    return output
+
+
+def _layout_fill(node: Mapping[str, Any]) -> str:
+    for fill in as_list(node.get("fills")):
+        if not isinstance(fill, dict):
+            continue
+        if fill.get("type") == "SOLID":
+            color = as_dict(fill.get("color"))
+            try:
+                red = int(float(color.get("r", 0)) * 255)
+                green = int(float(color.get("g", 0)) * 255)
+                blue = int(float(color.get("b", 0)) * 255)
+            except (TypeError, ValueError):
+                red = green = blue = 0
+            red, green, blue = (max(0, min(255, item)) for item in (red, green, blue))
+            return " bg:#{:02x}{:02x}{:02x}".format(red, green, blue)
+        if fill.get("type") == "IMAGE":
+            return " [IMAGE:{}]".format(text(fill.get("imageRef")))
+    return ""
+
+
+def format_layout_tree(node: Any, indent: int = 0) -> List[str]:
+    if not isinstance(node, dict) or node.get("visible") is False:
+        return []
+    box = as_dict(node.get("absoluteBoundingBox"))
+    width = box.get("width", "")
+    height = box.get("height", "")
+    x_value = box.get("x", "")
+    y_value = box.get("y", "")
+    size = " [{}x{}]".format(width, height) if width not in ("", None, 0) else ""
+    position = " @({},{})".format(x_value, y_value) if x_value not in ("", None) else ""
+    line = '{}{}: "{}"{}{}{}'.format(
+        "  " * indent,
+        text(node.get("type")),
+        text(node.get("name")),
+        size,
+        position,
+        _layout_fill(node),
+    )
+    lines = [line]
+    for child in filtered_layout_children(node):
+        lines.extend(format_layout_tree(child, indent + 1))
+    return lines
+
+
+def requested_node_document(data: Any, node_id: str, operation: str) -> Dict[str, Any]:
+    """Return the exact requested node document or fail instead of empty success."""
+    if not isinstance(data, dict) or not isinstance(data.get("nodes"), dict):
+        raise ApiError("Figma {} response did not contain a nodes map.".format(operation))
+    nodes = data["nodes"]
+    if node_id not in nodes:
+        raise ApiError("Requested node {} is missing from the Figma {} response.".format(node_id, operation))
+    node_value = nodes[node_id]
+    if not isinstance(node_value, dict):
+        raise ApiError("Requested node {} was not found in the Figma file.".format(node_id))
+    document = node_value.get("document")
+    if not isinstance(document, dict) or not document:
+        raise ApiError("Requested node {} has no document data.".format(node_id))
+    return document
+
+
+def find_image_refs(node: Any, found: Optional[List[str]] = None, seen: Optional[Set[str]] = None) -> List[str]:
+    if found is None:
+        found = []
+    if seen is None:
+        seen = set()
+    if not isinstance(node, dict):
+        return found
+    for fill in as_list(node.get("fills")):
+        if isinstance(fill, dict) and fill.get("type") == "IMAGE":
+            image_ref = text(fill.get("imageRef"))
+            if image_ref and image_ref not in seen:
+                seen.add(image_ref)
+                found.append(image_ref)
+    for child in as_list(node.get("children")):
+        find_image_refs(child, found, seen)
+    return found
+
+
+def sanitize_filename_component(value: str) -> str:
+    """Turn an API-provided imageRef into one safe path component."""
+    original = value
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", value.replace("/", "_").replace("\\", "_"))
+    cleaned = cleaned.strip(". ")[:120]
+    if not cleaned:
+        cleaned = "image"
+    windows_reserved = {"CON", "PRN", "AUX", "NUL"} | {
+        "{}{}".format(prefix, number) for prefix in ("COM", "LPT") for number in range(1, 10)
+    }
+    if cleaned.split(".", 1)[0].upper() in windows_reserved:
+        cleaned = "_" + cleaned
+    if cleaned != original or cleaned in {".", ".."}:
+        digest = hashlib.sha256(original.encode("utf-8", "replace")).hexdigest()[:10]
+        cleaned = "{}_{}".format(cleaned[:100], digest)
+    return cleaned
+
+
+CONTENT_TYPE_EXTENSIONS = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "image/svg+xml": "svg",
+}
+
+
+def infer_image_extension(url: str, content_type: str = "", final_url: str = "") -> str:
+    for candidate in (final_url, url):
+        try:
+            suffix = Path(urlsplit(candidate).path).suffix.lower().lstrip(".")
+        except ValueError:
+            suffix = ""
+        if suffix in {"png", "jpg", "jpeg", "gif", "webp", "svg"}:
+            return "jpg" if suffix == "jpeg" else suffix
+    normalized = content_type.lower().split(";", 1)[0].strip()
+    if normalized in CONTENT_TYPE_EXTENSIONS:
+        return CONTENT_TYPE_EXTENSIONS[normalized]
+    guessed = mimetypes.guess_extension(normalized) if normalized else None
+    if guessed in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}:
+        return "jpg" if guessed == ".jpeg" else guessed.lstrip(".")
+    return "png" if "png" in url.lower() else "jpg"
+
+
+def _image_response(
+    client: FigmaClient,
+    file_key: str,
+    node_ids: Sequence[str],
+    image_format: str,
+    scale: str,
+    absolute_bounds: bool = False,
+) -> Any:
+    params: Dict[str, Any] = {
+        "ids": ",".join(node_ids),
+        "format": image_format,
+        "scale": scale,
+    }
+    if absolute_bounds:
+        params["use_absolute_bounds"] = "true"
+    return client.get_json("/images/{}".format(endpoint_segment(file_key)), params)
+
+
+def instance_parent_id(node_id: str) -> str:
+    if ";" not in node_id:
+        return ""
+    first = node_id.split(";", 1)[0]
+    return first[1:] if first.startswith("I") else first
+
+
+def find_ancestor_ids(root: Any, target_id: str) -> List[str]:
+    """Return nearest-to-farthest ancestor IDs for target_id."""
+    if not isinstance(root, dict):
+        return []
+    stack: List[Tuple[Dict[str, Any], List[str]]] = [(root, [])]
+    while stack:
+        node, ancestors = stack.pop()
+        if text(node.get("id")) == target_id:
+            return list(reversed([item for item in ancestors if item]))
+        next_ancestors = ancestors + [text(node.get("id"))]
+        children = as_list(node.get("children"))
+        for child in reversed(children):
+            if isinstance(child, dict):
+                stack.append((child, next_ancestors))
+    return []
+
+
+def fetch_ancestor_ids(client: FigmaClient, file_key: str, node_id: str) -> List[str]:
+    # The shallow request is cheap for common top-level nodes.  If it misses,
+    # repeat with a deep tree, matching the canonical fallback's intent.
+    for depth in (2, 99):
+        data = client.get_json("/files/{}".format(endpoint_segment(file_key)), {"depth": depth})
+        ancestors = find_ancestor_ids(as_dict(data).get("document"), node_id)
+        if ancestors:
+            return ancestors
+    return []
+
+
+NEARBY_OFFSETS = (
+    -1, -2, -3, -4, -5, -6, -8, -10, -12, -15, -20, -25, -30, -40,
+    -50, -60, -80, -100, -150, -200,
+    1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200,
+)
+
+
+def nearby_node_ids(node_id: str) -> List[str]:
+    match = re.fullmatch(r"(\d+):(\d+)", node_id)
+    if not match:
+        return []
+    prefix, number_text = match.groups()
+    number = int(number_text)
+    return ["{}:{}".format(prefix, number + offset) for offset in NEARBY_OFFSETS if number + offset > 0][:40]
+
+
+@dataclass(frozen=True)
+class ExportImage:
+    url: str
+    rendered_node_id: str
+    fallback: str = ""
+
+
+def iter_export_images(
+    client: FigmaClient,
+    file_key: str,
+    node_id: str,
+    image_format: str,
+    scale: str,
+    include_direct: bool = True,
+    excluded_ids: Optional[Set[str]] = None,
+) -> Iterable[ExportImage]:
+    """Lazily yield direct, bounds, parent, then nearby export candidates."""
+    excluded = set(excluded_ids or set())
+    seen_urls: Set[str] = set()
+    if include_direct and node_id not in excluded:
+        direct = _image_response(client, file_key, [node_id], image_format, scale)
+        for found_id, image_url in extract_image_entries(direct, excluded):
+            if image_url not in seen_urls:
+                seen_urls.add(image_url)
+                yield ExportImage(image_url, found_id or node_id)
+        eprint("Trying export with absolute bounds...")
+        absolute = _image_response(client, file_key, [node_id], image_format, scale, True)
+        for found_id, image_url in extract_image_entries(absolute, excluded):
+            if image_url not in seen_urls:
+                seen_urls.add(image_url)
+                yield ExportImage(image_url, found_id or node_id, "absolute bounds")
+
+    attempted: Set[str] = {node_id} | excluded
+    derived_parent = instance_parent_id(node_id)
+    if derived_parent and derived_parent not in attempted:
+        eprint("Instance export unavailable; trying parent node {}...".format(derived_parent))
+        attempted.add(derived_parent)
+        response = _image_response(client, file_key, [derived_parent], image_format, scale)
+        for found_id, image_url in extract_image_entries(response, excluded):
+            if image_url not in seen_urls:
+                seen_urls.add(image_url)
+                yield ExportImage(image_url, found_id or derived_parent, "Instance parent")
+
+    eprint("Trying ordinary parent fallback...")
+    ancestor_target = derived_parent or node_id
+    ancestors = fetch_ancestor_ids(client, file_key, ancestor_target)
+    for parent_id in ancestors[:8]:
+        if parent_id in attempted:
+            continue
+        attempted.add(parent_id)
+        response = _image_response(client, file_key, [parent_id], image_format, scale)
+        for found_id, image_url in extract_image_entries(response, excluded):
+            if image_url not in seen_urls:
+                seen_urls.add(image_url)
+                yield ExportImage(image_url, found_id or parent_id, "parent node")
+
+    eprint("Trying nearby renderable nodes...")
+    candidates = [item for item in nearby_node_ids(ancestor_target) if item not in attempted]
+    if candidates:
+        response = _image_response(client, file_key, candidates, image_format, scale)
+        for found_id, image_url in extract_image_entries(response, excluded):
+            if image_url not in seen_urls:
+                seen_urls.add(image_url)
+                yield ExportImage(image_url, found_id, "nearby node")
+
+
+def resolve_export_image(
+    client: FigmaClient,
+    file_key: str,
+    node_id: str,
+    image_format: str,
+    scale: str,
+    fallback_only: bool = False,
+    excluded_ids: Optional[Set[str]] = None,
+) -> ExportImage:
+    """Compatibility helper returning the first available export URL."""
+    for candidate in iter_export_images(
+        client,
+        file_key,
+        node_id,
+        image_format,
+        scale,
+        include_direct=not fallback_only,
+        excluded_ids=excluded_ids,
+    ):
+        return candidate
+    raise ApiError(
+        "No image URL was returned after direct, absolute-bounds, parent, and nearby-node attempts. "
+        "The node may be hidden, empty, or a non-renderable component definition."
+    )
+
+
+def split_flags(
+    args: Sequence[str], allowed_values: Set[str], allowed_switches: Optional[Set[str]] = None
+) -> Tuple[List[str], Dict[str, str], Set[str]]:
+    positionals: List[str] = []
+    values: Dict[str, str] = {}
+    switches: Set[str] = set()
+    switch_names = allowed_switches or set()
+    for arg in args:
+        if not arg.startswith("--"):
+            positionals.append(arg)
+            continue
+        if arg in switch_names:
+            switches.add(arg)
+            continue
+        if "=" not in arg:
+            raise UsageError("Option '{}' must use --name=value syntax.".format(arg))
+        name, value = arg.split("=", 1)
+        if name not in allowed_values:
+            raise UsageError("Unknown option: {}".format(name))
+        if value == "":
+            raise UsageError("Option {} requires a value.".format(name))
+        values[name] = value
+    return positionals, values, switches
+
+
+def validate_scale(value: str) -> str:
+    try:
+        number = float(value)
+    except ValueError:
+        raise UsageError("scale must be a number between 0.01 and 4.") from None
+    if not (0.01 <= number <= 4.0):
+        raise UsageError("scale must be between 0.01 and 4.")
+    return value
+
+
+def validate_export_format(value: str) -> str:
+    lowered = value.lower()
+    if lowered == "jpeg":
+        lowered = "jpg"
+    if lowered not in {"png", "jpg", "svg", "pdf"}:
+        raise UsageError("format must be one of: png, jpg, svg, pdf.")
+    return lowered
+
+
+@dataclass(frozen=True)
+class ExportArguments:
+    file_key: str
+    node_id: str
+    image_format: str
+    scale: str
+    output: Path
+
+
+def parse_export_arguments(
+    args: Sequence[str], screenshot: bool = False, validate_output: bool = True
+) -> ExportArguments:
+    allowed = {"--scale", "--output"} if screenshot else {"--format", "--scale", "--output"}
+    positionals, flags, _switches = split_flags(args, allowed)
+    command = "screenshot" if screenshot else "export"
+    file_key, node_id, remaining = parse_file_and_node(positionals, command)
+    if screenshot:
+        if len(remaining) > 2:
+            raise UsageError("Usage: {} screenshot <url> [output] [scale]".format(PROGRAM))
+        output_text = remaining[0] if remaining else ""
+        scale = remaining[1] if len(remaining) > 1 else "2"
+        image_format = "png"
+    else:
+        if len(remaining) > 3:
+            raise UsageError("Usage: {} export <url> [format] [scale] [output]".format(PROGRAM))
+        image_format = remaining[0] if remaining else "png"
+        scale = remaining[1] if len(remaining) > 1 else "2"
+        output_text = remaining[2] if len(remaining) > 2 else ""
+    image_format = validate_export_format(flags.get("--format", image_format))
+    scale = validate_scale(flags.get("--scale", scale))
+    output_text = flags.get("--output", output_text)
+    default_output = not bool(output_text)
+    if output_text:
+        output = Path(output_text).expanduser()
+    else:
+        prefix = "figma_screenshot" if screenshot else "figma_export"
+        output = Path.home() / "Downloads" / "{}_{}.{}".format(
+            prefix, datetime.now().strftime("%Y%m%d_%H%M%S"), image_format
+        )
+    if output.name in {"", ".", ".."}:
+        raise FileOperationError("Output path must name a file.")
+    if validate_output and default_output:
+        try:
+            output.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise FileOperationError("Cannot create default Downloads directory '{}': {}".format(output.parent, exc)) from None
+    if validate_output and not output.parent.is_dir():
+        suggestion = " (Did you mean 'Downloads' with an 's'?)" if output.parent.name == "Download" else ""
+        raise FileOperationError("Output directory does not exist: {}{}".format(output.parent, suggestion))
+    return ExportArguments(file_key, node_id, image_format, scale, output)
+
+
+def handle_export(
+    client: FigmaClient,
+    args: Sequence[str],
+    screenshot: bool = False,
+    download_opener: Callable[..., Any] = urlopen,
+) -> None:
+    options = parse_export_arguments(args, screenshot=screenshot)
+    eprint(
+        "Exporting node {} from file {} as {} (scale: {}x)...".format(
+            options.node_id, options.file_key, options.image_format, options.scale
+        )
+    )
+    eprint("Downloading to: {}".format(options.output))
+    saw_candidate = False
+    last_failure = ""
+    for selected in iter_export_images(
+        client, options.file_key, options.node_id, options.image_format, options.scale
+    ):
+        saw_candidate = True
+        staged: Optional[StagedDownload] = None
+        try:
+            staged = download_to_temp(
+                selected.url,
+                options.output.parent,
+                prefix=".{}-candidate-".format(options.output.name),
+                opener=download_opener,
+            )
+            valid, reason = validate_export_content(staged, options.image_format)
+        except FileOperationError as exc:
+            last_failure = exc.message
+            eprint("Export candidate download failed; trying the next fallback: {}".format(exc.message))
+            if staged is not None:
+                remove_staged_download(staged)
+            continue
+        if not valid:
+            last_failure = reason
+            eprint("Export candidate was not valid {} data ({}); trying fallback...".format(
+                options.image_format.upper(), reason
+            ))
+            remove_staged_download(staged)
+            continue
+        if selected.fallback:
+            eprint(
+                "Warning: using {} {}. The downloaded image may not be the exact requested node.".format(
+                    selected.fallback, selected.rendered_node_id
+                )
+            )
+        try:
+            result = commit_staged_download(staged, options.output)
+        finally:
+            remove_staged_download(staged)
+        print("Done! Saved: {} ({})".format(options.output, format_size(result.size)))
+        return
+    if saw_candidate:
+        raise FileOperationError(
+            "All export candidates failed download or content validation{}.".format(
+                ": " + last_failure if last_failure else ""
+            )
+        )
+    raise ApiError(
+        "No image URL was returned after direct, absolute-bounds, parent, and nearby-node attempts."
+    )
+
+
+def handle_layout(client: FigmaClient, args: Sequence[str]) -> None:
+    positionals, _flags, switches = split_flags(args, set(), {"--json"})
+    file_key, node_id, remaining = parse_file_and_node(positionals, "layout")
+    if remaining:
+        raise UsageError("Usage: {} layout <url> [--json]".format(PROGRAM))
+    eprint("Fetching layout for node {} from file {}...".format(node_id, file_key))
+    data = client.get_json(
+        "/files/{}/nodes".format(endpoint_segment(file_key)),
+        {"ids": node_id, "geometry": "paths"},
+    )
+    document = requested_node_document(data, node_id, "layout")
+    if "--json" in switches:
+        filtered = filter_layout_tree(document)
+        if filtered is None:
+            raise ApiError("Requested layout node is invisible.")
+        print(json.dumps(filtered, ensure_ascii=False, separators=(",", ":")))
+    else:
+        lines = format_layout_tree(document)
+        if not lines:
+            raise ApiError("Requested layout node is invisible.")
+        for line in lines:
+            print(line)
+
+
+def _download_asset(
+    image_ref: str,
+    url: str,
+    output_dir: Path,
+    opener: Callable[..., Any] = urlopen,
+) -> DownloadResult:
+    safe_ref = sanitize_filename_component(image_ref)
+    staged = download_to_temp(
+        url,
+        output_dir,
+        prefix=".{}-asset-".format(safe_ref),
+        opener=opener,
+    )
+    try:
+        extension = infer_image_extension(url, staged.content_type, staged.final_url)
+        destination = output_dir / "{}.{}".format(safe_ref, extension)
+        return commit_staged_download(staged, destination)
+    finally:
+        remove_staged_download(staged)
+
+
+def handle_images(client: FigmaClient, args: Sequence[str]) -> None:
+    positionals, _flags, _switches = split_flags(args, set())
+    file_key, node_id, remaining = parse_file_and_node(positionals, "images")
+    if len(remaining) > 1:
+        raise UsageError("Usage: {} images <url> [output_dir]".format(PROGRAM))
+    explicit_output = bool(remaining)
+    output_dir = Path(remaining[0]).expanduser() if explicit_output else Path.home() / "Downloads" / "figma_assets"
+    if output_dir.exists() or output_dir.is_symlink():
+        if not output_dir.is_dir():
+            raise FileOperationError("Asset output path is not a directory: {}".format(output_dir))
+    elif explicit_output and not output_dir.parent.is_dir():
+        raise FileOperationError(
+            "Output directory parent does not exist: {}".format(output_dir.parent)
+        )
+    try:
+        output_dir.mkdir(parents=not explicit_output, exist_ok=True)
+    except OSError as exc:
+        raise FileOperationError("Cannot create output directory '{}': {}".format(output_dir, exc)) from None
+    if not output_dir.is_dir():
+        raise FileOperationError("Asset output path is not a directory: {}".format(output_dir))
+
+    eprint("Fetching image fills from node {}...".format(node_id))
+    node_data = client.get_json(
+        "/files/{}/nodes".format(endpoint_segment(file_key)), {"ids": node_id}
+    )
+    document = requested_node_document(node_data, node_id, "images")
+    references: List[str] = []
+    seen: Set[str] = set()
+    find_image_refs(document, references, seen)
+    if not references:
+        print("No image fills found in this node.")
+        return
+    eprint("Found {} unique image refs.".format(len(references)))
+    image_data = client.get_json("/files/{}/images".format(endpoint_segment(file_key)))
+    image_map = as_dict(as_dict(as_dict(image_data).get("meta")).get("images"))
+    for image_ref in references:
+        image_url = image_map.get(image_ref)
+        if not isinstance(image_url, str) or not image_url:
+            eprint("No download URL for image ref: {}".format(sanitize_filename_component(image_ref)))
+            continue
+        eprint("Downloading image ref {}...".format(sanitize_filename_component(image_ref)))
+        result = _download_asset(image_ref, image_url, output_dir)
+        print("Saved: {} ({})".format(result.path, format_size(result.size)))
+    print("Done! Assets saved to: {}".format(output_dir))
+
+
+def _require_args(args: Sequence[str], minimum: int, maximum: int, usage: str) -> None:
+    if len(args) < minimum or len(args) > maximum:
+        raise UsageError("Usage: {} {}".format(PROGRAM, usage))
+
+
+def _one_file_key(args: Sequence[str], usage: str) -> str:
+    _require_args(args, 1, 1, usage)
+    return get_file_key(args[0])
+
+
+def handle_file_info(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "file-info <url|file_key>")
+    data = as_dict(client.get_json("/files/{}".format(endpoint_segment(file_key)), {"depth": 1}))
+    print("File: {}".format(text(data.get("name"))))
+    print("Last modified: {}".format(text(data.get("lastModified"))))
+    print("Version: {}".format(text(data.get("version"))))
+    print("Editor type: {}".format(text(data.get("editorType"))))
+    print("Thumbnail: {}".format(text(data.get("thumbnailUrl"))))
+    print()
+    print("Pages:")
+    for child in as_list(as_dict(data.get("document")).get("children")):
+        child_dict = as_dict(child)
+        print("  - {} (id: {})".format(text(child_dict.get("name")), text(child_dict.get("id"))))
+
+
+def handle_file_meta(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "file-meta <url|file_key>")
+    eprint("Fetching file metadata...")
+    data = as_dict(client.get_json("/files/{}/meta".format(endpoint_segment(file_key))))
+    file_data = as_dict(data.get("file"))
+    print("Name: {}".format(text(file_data.get("name"))))
+    print("Folder: {}".format(text(file_data.get("folder_name"))))
+    print("Last touched: {}".format(text(file_data.get("last_touched_at"))))
+    print("Editor type: {}".format(text(file_data.get("editorType"))))
+    print("Version: {}".format(text(file_data.get("version"))))
+    print("Role: {}".format(text(file_data.get("role"))))
+    print("Link access: {}".format(text(file_data.get("link_access"))))
+    print("URL: {}".format(text(file_data.get("url"))))
+    print("Thumbnail: {}".format(text(file_data.get("thumbnail_url"))))
+    creator = as_dict(file_data.get("creator"))
+    if creator:
+        print("Creator: {} ({})".format(text(creator.get("handle")), text(creator.get("email"))))
+
+
+def handle_comments(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "comments <url|file_key>")
+    eprint("Fetching comments...")
+    data = as_dict(client.get_json("/files/{}/comments".format(endpoint_segment(file_key))))
+    comments = as_list(data.get("comments"))
+    print("Total comments: {}".format(len(comments)))
+    print()
+    for item in comments:
+        comment = as_dict(item)
+        resolved = " [RESOLVED]" if comment.get("resolved_at") else ""
+        user = as_dict(comment.get("user"))
+        print(
+            "[{}] {} ({}){}".format(
+                text(comment.get("id")), text(user.get("handle")), text(comment.get("created_at")), resolved
+            )
+        )
+        print("  {}".format(text(comment.get("message"))))
+        print()
+
+
+def handle_comment_reactions(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 2, 2, "comment-reactions <url|file_key> <comment_id>")
+    file_key = get_file_key(args[0])
+    comment_id = validate_identifier(args[1], "comment ID")
+    eprint("Fetching reactions for comment {}...".format(comment_id))
+    data = as_dict(
+        client.get_json(
+            "/files/{}/comments/{}/reactions".format(
+                endpoint_segment(file_key), endpoint_segment(comment_id)
+            )
+        )
+    )
+    reactions = as_list(data.get("reactions"))
+    print("Total reactions: {}".format(len(reactions)))
+    for item in reactions:
+        reaction = as_dict(item)
+        user = as_dict(reaction.get("user"))
+        print(
+            "  {} by {} ({})".format(
+                text(reaction.get("emoji")), text(user.get("handle")), text(reaction.get("created_at"))
+            )
+        )
+
+
+def handle_me(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 0, 0, "me")
+    eprint("Fetching current user info...")
+    data = as_dict(client.get_json("/me"))
+    print("ID: {}".format(text(data.get("id"))))
+    print("Handle: {}".format(text(data.get("handle"))))
+    print("Email: {}".format(text(data.get("email"))))
+    print("Image: {}".format(text(data.get("img_url"))))
+
+
+def handle_versions(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "versions <url|file_key>")
+    eprint("Fetching version history...")
+    data = as_dict(client.get_json("/files/{}/versions".format(endpoint_segment(file_key))))
+    versions = as_list(data.get("versions"))
+    print("Total versions: {}".format(len(versions)))
+    print()
+    for item in versions[:20]:
+        version = as_dict(item)
+        label = text(version.get("label")) or "(no label)"
+        user = as_dict(version.get("user"))
+        print("[{}] {}".format(text(version.get("id")), label))
+        print(
+            "  Created: {} by {}".format(
+                text(version.get("created_at")), text(user.get("handle"))
+            )
+        )
+        description = text(version.get("description"))
+        if description:
+            print("  Description: {}".format(description))
+        print()
+
+
+def handle_team_projects(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "team-projects <team_id>")
+    team_id = validate_identifier(args[0], "team ID")
+    eprint("Fetching projects for team {}...".format(team_id))
+    data = as_dict(client.get_json("/teams/{}/projects".format(endpoint_segment(team_id))))
+    projects = as_list(data.get("projects"))
+    print("Total projects: {}".format(len(projects)))
+    print()
+    for item in projects:
+        project = as_dict(item)
+        print("[{}] {}".format(text(project.get("id")), text(project.get("name"))))
+
+
+def handle_project_files(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "project-files <project_id>")
+    project_id = validate_identifier(args[0], "project ID")
+    eprint("Fetching files for project {}...".format(project_id))
+    data = as_dict(client.get_json("/projects/{}/files".format(endpoint_segment(project_id))))
+    files = as_list(data.get("files"))
+    print("Total files: {}".format(len(files)))
+    print()
+    for item in files:
+        file_data = as_dict(item)
+        print("[{}] {}".format(text(file_data.get("key")), text(file_data.get("name"))))
+        print("  Last modified: {}".format(text(file_data.get("last_modified"))))
+        print("  Thumbnail: {}...".format(text(file_data.get("thumbnail_url"))[:60]))
+        print()
+
+
+def _meta_items(client: FigmaClient, endpoint: str, key: str) -> List[Any]:
+    data = as_dict(client.get_json(endpoint))
+    return as_list(as_dict(data.get("meta")).get(key))
+
+
+def _print_component_list(components: List[Any], file_mode: bool) -> None:
+    print("Total components: {}".format(len(components)))
+    print()
+    for item in components[:30]:
+        component = as_dict(item)
+        print("[{}] {}".format(text(component.get("key")), text(component.get("name"))))
+        if file_mode:
+            print("  Node ID: {}".format(text(component.get("node_id"))))
+        print("  Description: {}".format(text(component.get("description")) or "(none)"))
+        if not file_mode:
+            print("  File: {}".format(text(as_dict(component.get("containing_frame")).get("name"))))
+        print()
+
+
+def handle_team_components(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "team-components <team_id>")
+    team_id = validate_identifier(args[0], "team ID")
+    eprint("Fetching components for team {}...".format(team_id))
+    items = _meta_items(client, "/teams/{}/components".format(endpoint_segment(team_id)), "components")
+    _print_component_list(items, False)
+
+
+def handle_file_components(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "file-components <url|file_key>")
+    eprint("Fetching components for file {}...".format(file_key))
+    items = _meta_items(client, "/files/{}/components".format(endpoint_segment(file_key)), "components")
+    _print_component_list(items, True)
+
+
+def handle_component(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "component <component_key>")
+    key = validate_identifier(args[0], "component key")
+    eprint("Fetching component {}...".format(key))
+    meta = as_dict(as_dict(client.get_json("/components/{}".format(endpoint_segment(key)))).get("meta"))
+    print("Name: {}".format(text(meta.get("name"))))
+    print("Key: {}".format(text(meta.get("key"))))
+    print("Description: {}".format(text(meta.get("description"))))
+    print("File key: {}".format(text(meta.get("file_key"))))
+    print("Node ID: {}".format(text(meta.get("node_id"))))
+    print("Thumbnail: {}".format(text(meta.get("thumbnail_url"))))
+    print("Created: {}".format(text(meta.get("created_at"))))
+    print("Updated: {}".format(text(meta.get("updated_at"))))
+
+
+def _print_component_sets(items: List[Any], file_mode: bool) -> None:
+    print("Total component sets: {}".format(len(items)))
+    print()
+    for item in items[:30]:
+        component_set = as_dict(item)
+        print("[{}] {}".format(text(component_set.get("key")), text(component_set.get("name"))))
+        if file_mode:
+            print("  Node ID: {}".format(text(component_set.get("node_id"))))
+        else:
+            print("  Description: {}".format(text(component_set.get("description")) or "(none)"))
+        print()
+
+
+def handle_team_component_sets(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "team-component-sets <team_id>")
+    team_id = validate_identifier(args[0], "team ID")
+    eprint("Fetching component sets for team {}...".format(team_id))
+    items = _meta_items(
+        client, "/teams/{}/component_sets".format(endpoint_segment(team_id)), "component_sets"
+    )
+    _print_component_sets(items, False)
+
+
+def handle_file_component_sets(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "file-component-sets <url|file_key>")
+    eprint("Fetching component sets for file {}...".format(file_key))
+    items = _meta_items(
+        client, "/files/{}/component_sets".format(endpoint_segment(file_key)), "component_sets"
+    )
+    _print_component_sets(items, True)
+
+
+def handle_component_set(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "component-set <key>")
+    key = validate_identifier(args[0], "component set key")
+    eprint("Fetching component set {}...".format(key))
+    meta = as_dict(
+        as_dict(client.get_json("/component_sets/{}".format(endpoint_segment(key)))).get("meta")
+    )
+    print("Name: {}".format(text(meta.get("name"))))
+    print("Key: {}".format(text(meta.get("key"))))
+    print("Description: {}".format(text(meta.get("description"))))
+    print("File key: {}".format(text(meta.get("file_key"))))
+    print("Node ID: {}".format(text(meta.get("node_id"))))
+    print("Thumbnail: {}".format(text(meta.get("thumbnail_url"))))
+
+
+def _print_styles(items: List[Any], file_mode: bool) -> None:
+    print("Total styles: {}".format(len(items)))
+    print()
+    for item in items[:30]:
+        style_data = as_dict(item)
+        print(
+            "[{}] {} ({})".format(
+                text(style_data.get("key")), text(style_data.get("name")), text(style_data.get("style_type"))
+            )
+        )
+        if file_mode:
+            print("  Node ID: {}".format(text(style_data.get("node_id"))))
+        else:
+            print("  Description: {}".format(text(style_data.get("description")) or "(none)"))
+        print()
+
+
+def handle_team_styles(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "team-styles <team_id>")
+    team_id = validate_identifier(args[0], "team ID")
+    eprint("Fetching styles for team {}...".format(team_id))
+    items = _meta_items(client, "/teams/{}/styles".format(endpoint_segment(team_id)), "styles")
+    _print_styles(items, False)
+
+
+def handle_file_styles(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "file-styles <url|file_key>")
+    eprint("Fetching styles for file {}...".format(file_key))
+    items = _meta_items(client, "/files/{}/styles".format(endpoint_segment(file_key)), "styles")
+    _print_styles(items, True)
+
+
+def handle_style(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "style <style_key>")
+    key = validate_identifier(args[0], "style key")
+    eprint("Fetching style {}...".format(key))
+    meta = as_dict(as_dict(client.get_json("/styles/{}".format(endpoint_segment(key)))).get("meta"))
+    print("Name: {}".format(text(meta.get("name"))))
+    print("Key: {}".format(text(meta.get("key"))))
+    print("Type: {}".format(text(meta.get("style_type"))))
+    print("Description: {}".format(text(meta.get("description"))))
+    print("File key: {}".format(text(meta.get("file_key"))))
+    print("Node ID: {}".format(text(meta.get("node_id"))))
+    print("Thumbnail: {}".format(text(meta.get("thumbnail_url"))))
+
+
+def _print_variables(data: Mapping[str, Any], published: bool) -> None:
+    meta = as_dict(data.get("meta"))
+    variables = as_dict(meta.get("variables"))
+    collections = as_dict(meta.get("variableCollections"))
+    collection_label = "Published collections" if published else "Collections"
+    variable_label = "Published variables" if published else "Variables"
+    print("{}: {}".format(collection_label, len(collections)))
+    for collection_id, raw_collection in collections.items():
+        collection = as_dict(raw_collection)
+        if published:
+            print("  [{}] {}".format(collection_id, text(collection.get("name"))))
+        else:
+            print(
+                "  [{}] {} (modes: {})".format(
+                    collection_id, text(collection.get("name")), len(as_list(collection.get("modes")))
+                )
+            )
+    print()
+    print("{}: {}".format(variable_label, len(variables)))
+    for variable_id, raw_variable in list(variables.items())[:30]:
+        variable = as_dict(raw_variable)
+        print(
+            "  [{}] {} ({})".format(
+                variable_id, text(variable.get("name")), text(variable.get("resolvedType"))
+            )
+        )
+
+
+def handle_variables_local(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "variables-local <url|file_key>")
+    eprint("Fetching local variables for file {}...".format(file_key))
+    data = as_dict(client.get_json("/files/{}/variables/local".format(endpoint_segment(file_key))))
+    _print_variables(data, False)
+
+
+def handle_variables_published(client: FigmaClient, args: Sequence[str]) -> None:
+    file_key = _one_file_key(args, "variables-published <url|file_key>")
+    eprint("Fetching published variables for file {}...".format(file_key))
+    data = as_dict(client.get_json("/files/{}/variables/published".format(endpoint_segment(file_key))))
+    _print_variables(data, True)
+
+
+def handle_dev_resources(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 2, "dev-resources <url|file_key> [node_id]")
+    if looks_like_url(args[0]):
+        parsed = parse_figma_url(args[0])
+        file_key, node_id = parsed.file_key, parsed.node_id
+        if len(args) == 2:
+            if node_id:
+                raise UsageError("node ID was supplied in both URL and positional arguments.")
+            node_id = validate_identifier(args[1], "node ID")
+    else:
+        file_key = validate_identifier(args[0], "file key")
+        node_id = validate_identifier(args[1], "node ID") if len(args) == 2 else ""
+    params = {"node_ids": node_id} if node_id else None
+    eprint("Fetching dev resources...")
+    data = as_dict(
+        client.get_json("/files/{}/dev_resources".format(endpoint_segment(file_key)), params)
+    )
+    resources = as_list(data.get("dev_resources"))
+    print("Total dev resources: {}".format(len(resources)))
+    print()
+    for item in resources[:30]:
+        resource = as_dict(item)
+        print("[{}] {}".format(text(resource.get("id")), text(resource.get("name"))))
+        print("  URL: {}".format(text(resource.get("url"))))
+        print("  Node ID: {}".format(text(resource.get("node_id"))))
+        print()
+
+
+def handle_analytics(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 3, "analytics <url|file_key> [type] [action]")
+    file_key = get_file_key(args[0])
+    item_type = args[1] if len(args) > 1 else "component"
+    action = args[2] if len(args) > 2 else "usages"
+    if item_type not in {"component", "style", "variable"}:
+        raise UsageError("analytics type must be component, style, or variable.")
+    if action not in {"actions", "usages"}:
+        raise UsageError("analytics action must be actions or usages.")
+    eprint("Fetching library analytics ({}/{}) for {}...".format(item_type, action, file_key))
+    data = as_dict(
+        client.get_json(
+            "/analytics/libraries/{}/{}/{}".format(
+                endpoint_segment(file_key), endpoint_segment(item_type), endpoint_segment(action)
+            )
+        )
+    )
+    rows = as_list(data.get("rows"))
+    print("Total rows: {}".format(len(rows)))
+    print()
+    for row in rows[:20]:
+        print(json.dumps(row, indent=2, ensure_ascii=False))
+        print()
+
+
+def handle_raw(client: FigmaClient, args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "raw </endpoint>")
+    endpoint = args[0]
+    if not endpoint.startswith("/") or endpoint.startswith("//") or "://" in endpoint:
+        raise UsageError("raw endpoint must be an API path beginning with '/'.")
+    eprint("GET {}".format(endpoint))
+    raw, _headers = client.get_bytes(endpoint)
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        # Exactly one request: non-JSON bytes are emitted as received.
+        sys.stdout.flush()
+        sys.stdout.buffer.write(raw)
+        sys.stdout.buffer.flush()
+        return
+    print(json.dumps(parsed, indent=4, ensure_ascii=False))
+
+
+TOKEN_GUIDE = """Figma Personal Access Token setup:
+  1. Open Figma Settings and create a Personal Access Token with the scopes
+     needed for the files and resources you intend to read.
+  2. Run: figma-api token set
+     The token is read from a hidden prompt. By default, GET /v1/me is used
+     only as an identity/current_user:read scope check, not as a general token
+     validation. A file-only token can receive HTTP 403 from /me and will be
+     saved with an identity-check warning.
+  3. To skip the /me request, run: figma-api token set --no-verify
+For automation, set FIGMA_TOKEN instead of passing a token as an argument.
+Official docs: https://developers.figma.com/docs/rest-api/personal-access-tokens/"""
+
+
+def _save_token_file(path: Path, value: str) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if os.name != "nt":
+            os.chmod(path.parent, 0o700)
+    except OSError as exc:
+        raise FileOperationError("Cannot create token directory '{}': {}".format(path.parent, exc)) from None
+    atomic_write_bytes(path, (value + "\n").encode("utf-8"), mode=stat.S_IRUSR | stat.S_IWUSR)
+
+
+def handle_token(
+    args: Sequence[str],
+    home: Optional[Path] = None,
+    prompt: Optional[Callable[[str], str]] = None,
+    api_opener: Optional[Callable[..., Any]] = None,
+) -> None:
+    path = token_path(home)
+    if not args:
+        print("Token management:")
+        print("  figma-api token set [--no-verify]  Set a token using a hidden prompt")
+        print("  figma-api token show               Show the active token, safely masked")
+        print("  figma-api token remove             Remove the saved token file")
+        print("  Default set checks identity through /me (requires current_user:read).")
+        print("  File-only tokens may get HTTP 403 from /me and are saved with a warning.")
+        print("  Automation should use FIGMA_TOKEN; tokens are never positional arguments.")
+        env_token = os.environ.get("FIGMA_TOKEN", "").strip()
+        if env_token:
+            print("Active token: {} (FIGMA_TOKEN)".format(mask_token(env_token)))
+        elif path.is_file():
+            try:
+                saved = path.read_text(encoding="utf-8").strip()
+            except OSError:
+                print("Saved token: unreadable ({})".format(path))
+            else:
+                print("Saved token: {} ({})".format(mask_token(saved), path))
+        else:
+            print("Status: not configured")
+            print(TOKEN_GUIDE)
+        return
+
+    action = args[0]
+    if action == "set":
+        set_args = list(args[1:])
+        if set_args not in ([], ["--no-verify"]):
+            raise UsageError("Usage: {} token set [--no-verify]".format(PROGRAM))
+        no_verify = set_args == ["--no-verify"]
+        try:
+            value = (prompt if prompt is not None else getpass.getpass)("Figma token: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            raise AuthError("Token input was cancelled.") from None
+        if not value:
+            raise UsageError("Token must not be empty.")
+        profile: Dict[str, Any] = {}
+        identity_checked = False
+        warning = ""
+        if no_verify:
+            warning = (
+                "Warning: token saved unverified (--no-verify); no identity check or network request "
+                "was performed."
+            )
+        else:
+            eprint("Checking identity and current_user:read access with Figma /me...")
+            # /me is an identity/scope check only. In particular, a token that
+            # can read files may legitimately lack current_user:read.
+            try:
+                client = FigmaClient(value) if api_opener is None else FigmaClient(value, opener=api_opener)
+                profile = as_dict(client.get_json("/me"))
+                identity_checked = True
+            except AuthError as exc:
+                if exc.status == 403:
+                    warning = (
+                        "Warning: token saved without identity verification because Figma /me returned "
+                        "HTTP 403. It may lack current_user:read or be subject to another authorization "
+                        "restriction."
+                    )
+                elif exc.status == 401:
+                    safe_detail = _safe_api_detail(exc.detail, value)
+                    reason = "HTTP 401{}".format(": " + safe_detail if safe_detail else "")
+                    raise AuthError(
+                        "Figma /me identity check failed; the token was not saved. {}. To save without "
+                        "this identity check, explicitly use '{} token set --no-verify'.".format(
+                            reason, PROGRAM
+                        ),
+                        status=401,
+                        detail=safe_detail,
+                    ) from None
+                else:
+                    raise AuthError(
+                        "The Figma /me identity check could not be started: {} The token was not saved. "
+                        "Correct the input or use '{} token set --no-verify'.".format(
+                            exc.message, PROGRAM
+                        ),
+                        status=exc.status,
+                    ) from None
+            except ApiError as exc:
+                raise ApiError(
+                    "The Figma /me identity check could not be completed: {} The token was not saved. "
+                    "Retry later or use '{} token set --no-verify' to save without the identity check.".format(
+                        exc.message, PROGRAM
+                    ),
+                    status=exc.status,
+                ) from None
+
+        _save_token_file(path, value)
+        print("Token saved to {}".format(path))
+        if identity_checked:
+            identity = _safe_api_detail(
+                profile.get("handle") or profile.get("email") or profile.get("id"), value
+            )
+            print("Current user: {}".format(identity or "(not provided by /me)"))
+        if warning:
+            eprint(warning)
+        return
+    if action == "show":
+        _require_args(args, 1, 1, "token show")
+        env_token = os.environ.get("FIGMA_TOKEN", "").strip()
+        if env_token:
+            print("Token source: FIGMA_TOKEN")
+            print("Token: {}".format(mask_token(env_token)))
+            return
+        try:
+            saved = path.read_text(encoding="utf-8").strip()
+        except FileNotFoundError:
+            print("Token is not configured.")
+            print(TOKEN_GUIDE)
+            return
+        except OSError as exc:
+            raise FileOperationError("Cannot read token file '{}': {}".format(path, exc)) from None
+        print("Token file: {}".format(path))
+        print("Token: {}".format(mask_token(saved)))
+        return
+    if action in {"remove", "rm"}:
+        _require_args(args, 1, 1, "token remove")
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            print("Token file does not exist: {}".format(path))
+        except OSError as exc:
+            raise FileOperationError("Cannot remove token file '{}': {}".format(path, exc)) from None
+        else:
+            print("Token removed: {}".format(path))
+        if os.environ.get("FIGMA_TOKEN", "").strip():
+            eprint("Note: FIGMA_TOKEN is still set in the environment and was not modified.")
+        return
+    raise UsageError("Unknown token action '{}'. Use set, show, or remove.".format(action))
+
+
+def _known_install_entries(home: Path) -> List[Path]:
+    return [
+        home / ".local" / "bin" / "figma-api",
+        home / ".local" / "bin" / "figma-api.py",
+        home / ".local" / "bin" / "figma-api.ps1",
+        home / ".local" / "bin" / "figma-api.bat",
+        home / ".local" / "bin" / "figma-api.cmd",
+        home / ".claude" / "tools" / "figma-api" / "figma-api.py",
+        home / ".claude" / "tools" / "figma-api" / "figma.sh",
+        home / ".claude" / "tools" / "figma-api" / "figma.ps1",
+    ]
+
+
+def _is_workspace_source(path: Path, current_script: Path) -> bool:
+    try:
+        resolved = path.resolve(strict=False)
+    except OSError:
+        return False
+    return (
+        resolved == current_script
+        and resolved.parent.name == "tools"
+        and (resolved.parent.parent / "AGENTS.md").is_file()
+    )
+
+
+def _is_proven_install_entry(path: Path, current_script: Path) -> Tuple[bool, str]:
+    """Prove ownership without trusting a guessed filename alone."""
+    if path.is_symlink():
+        try:
+            target = path.resolve(strict=True)
+        except OSError:
+            return False, "symlink target is missing or unreadable"
+        if target == current_script:
+            return True, "symlink to current script"
+        return False, "symlink does not resolve to the current script"
+    if not path.is_file():
+        return False, "not a regular file or symlink"
+    if _is_workspace_source(path, current_script):
+        return False, "workspace source is protected"
+    try:
+        if path.stat().st_size > 2 * 1024 * 1024:
+            return False, "file is too large to be a tool entry"
+        content = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return False, "file content is unreadable"
+    if INSTALL_MARKER_LINE in content.splitlines():
+        return True, "explicit figma-api install marker"
+    try:
+        current_content = current_script.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        current_content = ""
+    if current_content and content == current_content:
+        return True, "exact current-script content"
+    return False, "content has no matching install marker"
+
+
+def handle_uninstall(
+    args: Sequence[str], home: Optional[Path] = None, scan_global: bool = True
+) -> None:
+    force = False
+    for arg in args:
+        if arg in {"--force", "-f"}:
+            force = True
+        else:
+            raise UsageError("Unknown uninstall option: {}".format(arg))
+    user_home = home if home is not None else Path.home()
+    current_script = Path(__file__).resolve(strict=False)
+    removable: List[Tuple[str, Path]] = []
+    skipped: List[Tuple[Path, str]] = []
+    saved_token = token_path(user_home)
+    if saved_token.exists() or saved_token.is_symlink():
+        removable.append(("token", saved_token))
+    install_entries = _known_install_entries(user_home)
+    if scan_global and os.name != "nt":
+        install_entries.append(Path("/usr/local/bin/figma-api"))
+    for entry in install_entries:
+        if entry.exists() or entry.is_symlink():
+            proven, reason = _is_proven_install_entry(entry, current_script)
+            if proven:
+                removable.append(("verified install entry", entry))
+            else:
+                skipped.append((entry, reason))
+
+    print("Figma API CLI uninstall")
+    print("=======================")
+    if skipped:
+        print("Unverified same-name entries will be skipped:")
+        for path, reason in skipped:
+            print("  [skip] {} ({})".format(path, reason))
+    if not removable:
+        print("No token or verified install entries were found.")
+        print("Shell RC, PATH, AI configuration, and unverified files are untouched.")
+        return
+    print("The following verified files will be removed:")
+    for label, path in removable:
+        print("  [{}] {}".format(label, path))
+    print("Shell RC, PATH, and AI configuration files will not be modified.")
+    if not force:
+        try:
+            answer = input("Confirm uninstall? (y/N): ").strip().lower()
+        except EOFError:
+            answer = ""
+        if answer != "y":
+            print("Cancelled.")
+            return
+
+    failures: List[Path] = []
+    for _label, path in removable:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            continue
+        except OSError:
+            failures.append(path)
+            eprint("Could not remove: {}".format(path))
+        else:
+            print("Removed: {}".format(path))
+    if failures:
+        raise FileOperationError("Uninstall was incomplete; {} item(s) could not be removed.".format(len(failures)))
+    print("Uninstall complete.")
+
+
+def handle_url(args: Sequence[str]) -> None:
+    _require_args(args, 1, 1, "url <figma_url>")
+    parsed = parse_figma_url(args[0])
+    print("file_key: {}".format(parsed.file_key))
+    print("node_id: {}".format(parsed.node_id))
+
+
+HELP_TEXT = """Figma REST API CLI (Full Read-Only)
+
+Usage: figma-api <command> [arguments]
+
+Token management (no authentication required):
+  token [set [--no-verify]|show|remove]            Manage the Figma token
+    token set always uses a hidden prompt; tokens are never positional
+    By default, /me only checks identity/current_user:read scope; a file-only
+    token may receive HTTP 403 and is then saved with an identity warning
+    --no-verify skips /me and saves unverified; automation should use FIGMA_TOKEN
+
+File operations:
+  screenshot|ss <url>|<key> <node> [out] [scale]  Export node as PNG
+  export|exp <url>|<key> <node> [fmt] [scale] [out]
+                                                  Export png/jpg/svg/pdf
+    Overrides: --format=png --scale=2 --output=file.png
+  layout|l <url>|<key> <node> [--json]            Print filtered node layout
+  images|img <url>|<key> <node> [output_dir]       Download image fills
+  file-info|info <url|file_key>                    File info and pages
+  file-meta|meta <url|file_key>                    File metadata
+
+Comments, users, and history:
+  comments|cm <url|file_key>                       List comments
+  comment-reactions|cr <url|file_key> <comment_id> List reactions
+  me                                               Current user
+  versions|ver <url|file_key>                      Version history
+
+Projects and library assets:
+  team-projects|tp <team_id>                       Team projects
+  project-files|pf <project_id>                    Project files
+  team-components|tc <team_id>                     Team components
+  file-components|fc <url|file_key>                File components
+  component|comp <component_key>                   Component details
+  team-component-sets|tcs <team_id>                Team component sets
+  file-component-sets|fcs <url|file_key>           File component sets
+  component-set|cs <key>                           Component set details
+  team-styles|ts <team_id>                         Team styles
+  file-styles|fs <url|file_key>                    File styles
+  style|st <style_key>                             Style details
+  variables-local|vl <url|file_key>                Local variables
+  variables-published|vp <url|file_key>            Published variables
+  dev-resources|dr <url|file_key> [node_id]         Dev resources
+  analytics|an <url|file_key> [type] [action]       Library analytics
+
+Utilities (url/help/self-test need no authentication):
+  raw </endpoint>                                  One raw GET request
+  url <figma_url>                                  Parse file key and node ID
+  uninstall [--force]                              Remove token and verified install entries
+  self-test | --self-test                          Run offline built-in tests
+  help | -h | --help                               Show this help
+
+Token source precedence: FIGMA_TOKEN, then ~/.config/figma/token.
+All API operations are read-only GET requests."""
+
+
+ALIASES: Dict[str, str] = {
+    "screenshot": "screenshot", "ss": "screenshot",
+    "export": "export", "exp": "export",
+    "layout": "layout", "l": "layout",
+    "images": "images", "img": "images",
+    "file-info": "file-info", "info": "file-info",
+    "file-meta": "file-meta", "meta": "file-meta",
+    "comments": "comments", "cm": "comments",
+    "comment-reactions": "comment-reactions", "cr": "comment-reactions",
+    "me": "me",
+    "versions": "versions", "ver": "versions",
+    "team-projects": "team-projects", "tp": "team-projects",
+    "project-files": "project-files", "pf": "project-files",
+    "team-components": "team-components", "tc": "team-components",
+    "file-components": "file-components", "fc": "file-components",
+    "component": "component", "comp": "component",
+    "team-component-sets": "team-component-sets", "tcs": "team-component-sets",
+    "file-component-sets": "file-component-sets", "fcs": "file-component-sets",
+    "component-set": "component-set", "cs": "component-set",
+    "team-styles": "team-styles", "ts": "team-styles",
+    "file-styles": "file-styles", "fs": "file-styles",
+    "style": "style", "st": "style",
+    "variables-local": "variables-local", "vl": "variables-local",
+    "variables-published": "variables-published", "vp": "variables-published",
+    "dev-resources": "dev-resources", "dr": "dev-resources",
+    "analytics": "analytics", "an": "analytics",
+    "raw": "raw",
+}
+
+
+AUTH_HANDLERS: Dict[str, Callable[[FigmaClient, Sequence[str]], None]] = {
+    "layout": handle_layout,
+    "images": handle_images,
+    "file-info": handle_file_info,
+    "file-meta": handle_file_meta,
+    "comments": handle_comments,
+    "comment-reactions": handle_comment_reactions,
+    "me": handle_me,
+    "versions": handle_versions,
+    "team-projects": handle_team_projects,
+    "project-files": handle_project_files,
+    "team-components": handle_team_components,
+    "file-components": handle_file_components,
+    "component": handle_component,
+    "team-component-sets": handle_team_component_sets,
+    "file-component-sets": handle_file_component_sets,
+    "component-set": handle_component_set,
+    "team-styles": handle_team_styles,
+    "file-styles": handle_file_styles,
+    "style": handle_style,
+    "variables-local": handle_variables_local,
+    "variables-published": handle_variables_published,
+    "dev-resources": handle_dev_resources,
+    "analytics": handle_analytics,
+    "raw": handle_raw,
+}
+
+
+class _FakeDownloadResponse(io.BytesIO):
+    """Minimal urllib response used only by the offline self-test."""
+
+    def __init__(self, body: bytes, content_type: str, final_url: str) -> None:
+        super().__init__(body)
+        self.headers = {"Content-Type": content_type}
+        self._final_url = final_url
+
+    def geturl(self) -> str:
+        return self._final_url
+
+    def __enter__(self) -> "_FakeDownloadResponse":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+
+def _run_self_test_body() -> int:
+    """Run deterministic tests after the public wrapper isolates HOME."""
+    passed = 0
+    failures: List[str] = []
+
+    def check(name: str, condition: bool) -> None:
+        nonlocal passed
+        if condition:
+            passed += 1
+        else:
+            failures.append(name)
+
+    def rejects(name: str, callback: Callable[[], Any]) -> None:
+        try:
+            callback()
+        except UsageError:
+            check(name, True)
+        else:
+            check(name, False)
+
+    def raises(name: str, expected: Any, callback: Callable[[], Any]) -> None:
+        try:
+            callback()
+        except expected:
+            check(name, True)
+        except Exception:
+            check(name, False)
+        else:
+            check(name, False)
+
+    simple = parse_figma_url("https://www.figma.com/design/ABC123/My-Design?node-id=3-1234")
+    check("ordinary design URL", simple == ParsedFigmaUrl("ABC123", "3:1234"))
+    old = parse_figma_url("https://figma.com/file/OLD123/title?node-id=10-20")
+    check("legacy file URL", old == ParsedFigmaUrl("OLD123", "10:20"))
+    titleless = parse_figma_url("https://www.figma.com/design/NO_TITLE?node-id=5-6")
+    check("URL without title", titleless == ParsedFigmaUrl("NO_TITLE", "5:6"))
+    instance = parse_figma_url(
+        "https://www.figma.com/design/XYZ/x?node-id=I3749%3A73468%3B3217%3A65118%3B3481%3A14427"
+    )
+    check(
+        "encoded Instance URL",
+        instance.node_id == "I3749:73468;3217:65118;3481:14427",
+    )
+    raw_instance = parse_figma_url(
+        "https://www.figma.com/design/XYZ/x?node-id=I3749:73468;3217:65118&mode=dev"
+    )
+    check("raw-semicolon Instance URL", raw_instance.node_id == "I3749:73468;3217:65118")
+    extra = parse_figma_url(
+        "https://www.figma.com/design/ABC/x?t=before&node-id=5-100&scaling=min"
+    )
+    check("additional query parameters", extra.node_id == "5:100")
+    rejects("lookalike host", lambda: parse_figma_url("https://figma.com.evil.test/design/X?node-id=1-2"))
+    rejects("prefixed host", lambda: parse_figma_url("https://evilfigma.com/design/X?node-id=1-2"))
+    rejects("wrong path", lambda: parse_figma_url("https://www.figma.com/proto/X?node-id=1-2"))
+
+    check("simple node encoding", urlencode_node_id("3:1234") == "3%3A1234")
+    check(
+        "Instance node encoding",
+        urlencode_node_id("I1:2;3:4") == "I1%3A2%3B3%3A4",
+    )
+    check(
+        "image URL extraction",
+        extract_image_url({"images": {"a": None, "b": "https://assets.example/image.png"}})
+        == "https://assets.example/image.png",
+    )
+    check("null image URL", extract_image_url('{"images":{"a":null}}') == "")
+
+    captured_requests: List[Request] = []
+
+    def capture_api_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+        del timeout
+        captured_requests.append(request)
+        return _FakeDownloadResponse(b'{"ok":true}', "application/json", request.full_url)
+
+    request_client = FigmaClient("figd_offline_test_token", opener=capture_api_open)
+    request_client.get_json("/images/FILE", {"ids": "1:2", "format": "png"})
+    captured = captured_requests[0]
+    captured_headers = {key.lower(): value for key, value in captured.header_items()}
+    check(
+        "API Request URL/query/GET",
+        captured.get_method() == "GET"
+        and captured.full_url == "https://api.figma.com/v1/images/FILE?ids=1%3A2&format=png",
+    )
+    check(
+        "API authentication header",
+        captured_headers.get("x-figma-token") == "figd_offline_test_token",
+    )
+
+    redirect_handler = SafeApiRedirectHandler()
+    same_origin = redirect_handler.redirect_request(
+        captured,
+        None,
+        302,
+        "Found",
+        {},
+        "https://api.figma.com/v1/images/FILE?ids=9%3A9",
+    )
+    same_headers = {
+        key.lower(): value for key, value in (same_origin.header_items() if same_origin is not None else [])
+    }
+    check(
+        "same-origin API redirect",
+        same_origin is not None
+        and same_origin.get_method() == "GET"
+        and same_origin.full_url.endswith("?ids=9%3A9")
+        and same_headers.get("x-figma-token") == "figd_offline_test_token",
+    )
+    raises(
+        "cross-origin API redirect rejected",
+        ApiError,
+        lambda: redirect_handler.redirect_request(
+            captured, None, 302, "Found", {}, "https://cdn.example/v1/me"
+        ),
+    )
+    raises(
+        "HTTPS downgrade API redirect rejected",
+        ApiError,
+        lambda: redirect_handler.redirect_request(
+            captured, None, 302, "Found", {}, "http://api.figma.com/v1/me"
+        ),
+    )
+
+    def parse_offline_payload(payload: Any) -> Any:
+        encoded = json.dumps(payload).encode("utf-8")
+
+        def payload_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+            del request, timeout
+            return _FakeDownloadResponse(encoded, "application/json", "https://api.figma.com/v1/me")
+
+        return FigmaClient("figd_offline", opener=payload_open).get_json("/me")
+
+    raises("truthy error envelope", ApiError, lambda: parse_offline_payload({"error": "denied"}))
+    raises(
+        "numeric status error envelope",
+        ApiError,
+        lambda: parse_offline_payload({"status": 429, "message": "slow down"}),
+    )
+    raises("false status error envelope", ApiError, lambda: parse_offline_payload({"status": False}))
+    check("success status envelope", parse_offline_payload({"status": 200, "ok": True}).get("ok") is True)
+    try:
+        parse_offline_payload({"error": "figd_offline" + "x" * 1000})
+    except ApiError as exc:
+        check("API error detail redacted/truncated", "figd_offline" not in exc.message and len(exc.message) < 350)
+    else:
+        check("API error detail redacted/truncated", False)
+
+    def api_error_opener(status_code: int, payload: Mapping[str, Any]) -> Callable[..., Any]:
+        encoded = json.dumps(payload).encode("utf-8")
+
+        def raise_http_error(request: Request, timeout: float = 0) -> Any:
+            del timeout
+            raise HTTPError(
+                request.full_url,
+                status_code,
+                "offline simulated response",
+                {},
+                io.BytesIO(encoded),
+            )
+
+        return raise_http_error
+
+    auth_status_token = "figd_auth_status_secret"
+    for auth_status in (401, 403):
+        try:
+            FigmaClient(
+                auth_status_token,
+                opener=api_error_opener(
+                    auth_status, {"message": "offline detail " + auth_status_token}
+                ),
+            ).get_json("/me")
+        except AuthError as exc:
+            check(
+                "HTTP {} AuthError status/detail".format(auth_status),
+                exc.status == auth_status
+                and exc.http_status == auth_status
+                and auth_status_token not in exc.message
+                and "[REDACTED]" in exc.message,
+            )
+        else:
+            check("HTTP {} AuthError status/detail".format(auth_status), False)
+
+    raises(
+        "missing requested node rejected",
+        ApiError,
+        lambda: requested_node_document({"nodes": {}}, "1:2", "layout"),
+    )
+    raises(
+        "null requested node rejected",
+        ApiError,
+        lambda: requested_node_document({"nodes": {"1:2": None}}, "1:2", "images"),
+    )
+    raises(
+        "null requested document rejected",
+        ApiError,
+        lambda: requested_node_document({"nodes": {"1:2": {"document": None}}}, "1:2", "layout"),
+    )
+
+    box = {"x": 1, "y": 2, "width": 3, "height": 4}
+    layout_fixture = {
+        "id": "1:1",
+        "type": "INSTANCE",
+        "name": "Card",
+        "children": [
+            {"id": "1:2", "type": "TEXT", "name": "Title", "absoluteBoundingBox": box},
+            {"id": "1:3", "type": "TEXT", "name": "Title", "absoluteBoundingBox": dict(box)},
+            {"id": "1:2", "type": "TEXT", "name": "Exact duplicate ID", "absoluteBoundingBox": box},
+            {"id": "1:4", "type": "RECTANGLE", "name": "Hidden", "visible": False},
+            {"id": "1:5", "type": "FRAME", "name": "Card"},
+        ],
+    }
+    filtered = filter_layout_tree(layout_fixture)
+    filtered_children = as_list(as_dict(filtered).get("children"))
+    filtered_ids = [text(as_dict(child).get("id")) for child in filtered_children]
+    check("layout removes only invisible/exact duplicate IDs", filtered_ids == ["1:2", "1:3", "1:5"])
+    check("layout preserves overlapping different IDs", "1:2" in filtered_ids and "1:3" in filtered_ids)
+    check("layout preserves Instance same-name FRAME", "1:5" in filtered_ids)
+
+    expected_aliases = {
+        "ss": "screenshot", "exp": "export", "l": "layout", "img": "images",
+        "info": "file-info", "meta": "file-meta", "cm": "comments", "cr": "comment-reactions",
+        "ver": "versions", "tp": "team-projects", "pf": "project-files", "tc": "team-components",
+        "fc": "file-components", "comp": "component", "tcs": "team-component-sets",
+        "fcs": "file-component-sets", "cs": "component-set", "ts": "team-styles",
+        "fs": "file-styles", "st": "style", "vl": "variables-local",
+        "vp": "variables-published", "dr": "dev-resources", "an": "analytics",
+    }
+    check("all aliases", all(ALIASES.get(key) == value for key, value in expected_aliases.items()))
+    canonical_commands = {
+        "screenshot", "export", "layout", "images", "file-info", "file-meta", "comments",
+        "comment-reactions", "me", "versions", "team-projects", "project-files",
+        "team-components", "file-components", "component", "team-component-sets",
+        "file-component-sets", "component-set", "team-styles", "file-styles", "style",
+        "variables-local", "variables-published", "dev-resources", "analytics", "raw",
+    }
+    check(
+        "all canonical commands",
+        set(ALIASES.values()) == canonical_commands
+        and all(ALIASES.get(command) == command for command in canonical_commands)
+        and all(
+            command in {"screenshot", "export"} or command in AUTH_HANDLERS
+            for command in canonical_commands
+        ),
+    )
+    check("token help has no positional secret", "token set [token]" not in HELP_TEXT and "token set <" not in HELP_TEXT)
+    check(
+        "token help describes identity scope and automation",
+        all(
+            phrase in HELP_TEXT + TOKEN_GUIDE
+            for phrase in ("current_user:read", "file-only", "--no-verify", "FIGMA_TOKEN")
+        ),
+    )
+
+    check("recursive image refs", find_image_refs({"children": [{"fills": [
+        {"type": "IMAGE", "imageRef": "a"}, {"type": "IMAGE", "imageRef": "a"}
+    ]}]}) == ["a"])
+    check("path-safe image name", "/" not in sanitize_filename_component("../../evil/name"))
+    check("extension from path", infer_image_extension("https://assets.example/a.webp", "image/png") == "webp")
+    check("extension from content type", infer_image_extension("https://assets.example/a", "image/png") == "png")
+
+    with tempfile.TemporaryDirectory(prefix="figma-api-self-test-") as temporary:
+        root = Path(temporary)
+        parsed_args = parse_export_arguments(
+            [
+                "https://www.figma.com/design/ARG/x?node-id=7-8",
+                "--format=svg",
+                "--scale=3",
+                "--output={}".format(root / "out.svg"),
+            ]
+        )
+        check(
+            "export flag parser",
+            parsed_args.file_key == "ARG"
+            and parsed_args.node_id == "7:8"
+            and parsed_args.image_format == "svg"
+            and parsed_args.scale == "3",
+        )
+
+        fake_home = root / "isolated-home"
+        fake_home.mkdir()
+        saved_home_environment = {
+            name: os.environ.get(name) for name in ("HOME", "USERPROFILE")
+        }
+        os.environ["HOME"] = str(fake_home)
+        os.environ["USERPROFILE"] = str(fake_home)
+        try:
+            default_args = parse_export_arguments(
+                ["https://www.figma.com/design/ARG/x?node-id=7-8"],
+                validate_output=True,
+            )
+        finally:
+            for name, previous in saved_home_environment.items():
+                if previous is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = previous
+        check(
+            "default Downloads directory created",
+            default_args.output.parent == fake_home / "Downloads"
+            and default_args.output.parent.is_dir(),
+        )
+        raises(
+            "explicit missing output parent rejected",
+            FileOperationError,
+            lambda: parse_export_arguments(
+                [
+                    "https://www.figma.com/design/ARG/x?node-id=7-8",
+                    "--output={}".format(root / "missing" / "out.png"),
+                ]
+            ),
+        )
+        raises(
+            "explicit asset output parent rejected",
+            FileOperationError,
+            lambda: handle_images(  # type: ignore[arg-type]
+                None,
+                ["ARG", "7:8", str(root / "missing-assets-parent" / "assets")],
+            ),
+        )
+        raises(
+            "token positional secret rejected",
+            UsageError,
+            lambda: handle_token(
+                ["set", "SECRET"],
+                home=root,
+                prompt=lambda _label: "prompt-must-not-run",
+            ),
+        )
+        raises(
+            "token set unknown option rejected",
+            UsageError,
+            lambda: handle_token(
+                ["set", "--unknown"],
+                home=root,
+                prompt=lambda _label: "prompt-must-not-run",
+            ),
+        )
+
+        token_200 = "figd_self_test_me_200_secret"
+        token_home_200 = root / "token-home-200"
+        token_requests_200: List[Request] = []
+
+        def me_200_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+            del timeout
+            token_requests_200.append(request)
+            return _FakeDownloadResponse(
+                b'{"id":"offline-user-id","handle":"offline-user"}',
+                "application/json",
+                request.full_url,
+            )
+
+        token_200_stdout = io.StringIO()
+        token_200_stderr = io.StringIO()
+        with contextlib.redirect_stdout(token_200_stdout), contextlib.redirect_stderr(token_200_stderr):
+            handle_token(
+                ["set"],
+                home=token_home_200,
+                prompt=lambda _label: token_200,
+                api_opener=me_200_open,
+            )
+        token_file_200 = token_path(token_home_200)
+        check(
+            "token set /me 200 saves and identifies user",
+            token_file_200.read_text(encoding="utf-8") == token_200 + "\n"
+            and "Current user: offline-user" in token_200_stdout.getvalue()
+            and len(token_requests_200) == 1
+            and token_requests_200[0].full_url == "https://api.figma.com/v1/me",
+        )
+        check(
+            "token set /me 200 output redacts token",
+            token_200 not in token_200_stdout.getvalue()
+            and token_200 not in token_200_stderr.getvalue(),
+        )
+        if os.name != "nt":
+            check("token set /me 200 mode 0600", stat.S_IMODE(token_file_200.stat().st_mode) == 0o600)
+
+        token_403 = "figd_self_test_me_403_secret"
+        token_home_403 = root / "token-home-403"
+        token_403_stdout = io.StringIO()
+        token_403_stderr = io.StringIO()
+        with contextlib.redirect_stdout(token_403_stdout), contextlib.redirect_stderr(token_403_stderr):
+            handle_token(
+                ["set"],
+                home=token_home_403,
+                prompt=lambda _label: token_403,
+                api_opener=api_error_opener(
+                    403, {"message": "offline scope response " + token_403}
+                ),
+            )
+        token_file_403 = token_path(token_home_403)
+        warning_403 = token_403_stderr.getvalue()
+        check(
+            "token set /me 403 saves with scope warning",
+            token_file_403.read_text(encoding="utf-8") == token_403 + "\n"
+            and "HTTP 403" in warning_403
+            and "current_user:read" in warning_403
+            and "authorization restriction" in warning_403,
+        )
+        check(
+            "token set /me 403 output redacts token",
+            token_403 not in token_403_stdout.getvalue() and token_403 not in warning_403,
+        )
+        if os.name != "nt":
+            check("token set /me 403 mode 0600", stat.S_IMODE(token_file_403.stat().st_mode) == 0o600)
+
+        token_401 = "figd_self_test_me_401_secret"
+        token_home_401 = root / "token-home-401"
+        token_401_stdout = io.StringIO()
+        token_401_stderr = io.StringIO()
+        token_401_error: Optional[AuthError] = None
+
+        def me_401_payload_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+            del timeout
+            return _FakeDownloadResponse(
+                b'{"status":401,"err":"Token has expired"}',
+                "application/json",
+                request.full_url,
+            )
+
+        try:
+            with contextlib.redirect_stdout(token_401_stdout), contextlib.redirect_stderr(token_401_stderr):
+                handle_token(
+                    ["set"],
+                    home=token_home_401,
+                    prompt=lambda _label: token_401,
+                    api_opener=me_401_payload_open,
+                )
+        except AuthError as exc:
+            token_401_error = exc
+        check(
+            "token set /me 401 rejects without writing",
+            token_401_error is not None
+            and token_401_error.status == 401
+            and "--no-verify" in token_401_error.message
+            and not token_path(token_home_401).exists(),
+        )
+        check(
+            "token set preserves exact expired-token API detail",
+            token_401_error is not None
+            and token_401_error.detail == "Token has expired"
+            and "HTTP 401: Token has expired" in token_401_error.message
+            and "check token" not in token_401_error.message.lower(),
+        )
+        token_401_messages = (
+            token_401_stdout.getvalue()
+            + token_401_stderr.getvalue()
+            + (token_401_error.message if token_401_error is not None else "")
+        )
+        check("token set /me 401 output redacts token", token_401 not in token_401_messages)
+
+        token_no_verify = "figd_self_test_no_verify_secret"
+        token_home_no_verify = root / "token-home-no-verify"
+        no_verify_network_calls = [0]
+
+        def no_verify_open(request: Request, timeout: float = 0) -> Any:
+            del request, timeout
+            no_verify_network_calls[0] += 1
+            raise AssertionError("--no-verify attempted a network request")
+
+        no_verify_stdout = io.StringIO()
+        no_verify_stderr = io.StringIO()
+        with contextlib.redirect_stdout(no_verify_stdout), contextlib.redirect_stderr(no_verify_stderr):
+            handle_token(
+                ["set", "--no-verify"],
+                home=token_home_no_verify,
+                prompt=lambda _label: token_no_verify,
+                api_opener=no_verify_open,
+            )
+        no_verify_file = token_path(token_home_no_verify)
+        check(
+            "token set --no-verify saves without network",
+            no_verify_network_calls[0] == 0
+            and no_verify_file.read_text(encoding="utf-8") == token_no_verify + "\n"
+            and "saved unverified" in no_verify_stderr.getvalue(),
+        )
+        check(
+            "token set --no-verify output redacts token",
+            token_no_verify not in no_verify_stdout.getvalue()
+            and token_no_verify not in no_verify_stderr.getvalue(),
+        )
+        if os.name != "nt":
+            check(
+                "token set --no-verify mode 0600",
+                stat.S_IMODE(no_verify_file.stat().st_mode) == 0o600,
+            )
+
+        body = b"offline-download-bytes"
+        download_requests: List[Request] = []
+
+        def fake_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+            del timeout
+            download_requests.append(request)
+            return _FakeDownloadResponse(body, "image/png", "https://assets.example/final.png")
+
+        destination = root / "download.bin"
+        result = download_atomic("https://assets.example/start", destination, opener=fake_open)
+        check("fake download bytes", destination.read_bytes() == body and result.size == len(body))
+        check("download atomic temp cleanup", not list(root.glob(".download.bin-*.tmp")))
+        download_headers = {key.lower(): value for key, value in download_requests[0].header_items()}
+        check(
+            "CDN download GET has no token",
+            download_requests[0].get_method() == "GET" and "x-figma-token" not in download_headers,
+        )
+        if os.name != "nt":
+            check("download mode 0644", stat.S_IMODE(destination.stat().st_mode) == 0o644)
+
+        first_stage = download_to_temp(
+            "https://assets.example/one", root, prefix=".asset-stage-", opener=fake_open
+        )
+        second_stage = download_to_temp(
+            "https://assets.example/two", root, prefix=".asset-stage-", opener=fake_open
+        )
+        try:
+            check(
+                "random exclusive staging paths",
+                first_stage.path != second_stage.path
+                and first_stage.path.is_file()
+                and second_stage.path.is_file(),
+            )
+        finally:
+            remove_staged_download(first_stage)
+            remove_staged_download(second_stage)
+        check("random staging cleanup", not list(root.glob(".asset-stage-*.tmp")))
+
+        def failing_open(request: Request, timeout: float = 0) -> Any:
+            del request, timeout
+            raise URLError("offline failure")
+
+        failed_destination = root / "failed.bin"
+        try:
+            download_atomic("https://assets.example/fail", failed_destination, opener=failing_open)
+        except FileOperationError:
+            pass
+        else:
+            failures.append("fake failed download raises")
+        check("failed download absent", not failed_destination.exists())
+        check("failed download temp cleanup", not list(root.glob(".failed.bin-*.tmp")))
+
+        small_svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
+        small_png = base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+        )
+
+        class DirectExportClient:
+            def __init__(self, url: str) -> None:
+                self.url = url
+                self.calls: List[Tuple[str, Optional[Mapping[str, Any]]]] = []
+
+            def get_json(self, endpoint: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+                self.calls.append((endpoint, params))
+                requested_id = text((params or {}).get("ids"))
+                return {"images": {requested_id: self.url}}
+
+        def payload_opener(payload: bytes, content_type: str) -> Callable[..., Any]:
+            def open_payload(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+                del timeout
+                return _FakeDownloadResponse(payload, content_type, request.full_url)
+
+            return open_payload
+
+        svg_client = DirectExportClient("https://assets.example/direct.svg")
+        svg_output = root / "small.svg"
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            handle_export(
+                svg_client,  # type: ignore[arg-type]
+                ["ARG", "7:8", "svg", "2", str(svg_output)],
+                download_opener=payload_opener(small_svg, "image/svg+xml"),
+            )
+        check(
+            "valid small SVG keeps requested node",
+            svg_output.read_bytes() == small_svg and len(svg_client.calls) == 1,
+        )
+
+        png_client = DirectExportClient("https://assets.example/direct.png")
+        png_output = root / "small.png"
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            handle_export(
+                png_client,  # type: ignore[arg-type]
+                ["ARG", "7:8", "png", "2", str(png_output)],
+                download_opener=payload_opener(small_png, "image/png"),
+            )
+        check(
+            "valid small PNG keeps requested node",
+            png_output.read_bytes() == small_png and len(png_client.calls) == 1,
+        )
+
+        class InvalidExportClient:
+            def __init__(self) -> None:
+                self.image_calls = 0
+
+            def get_json(self, endpoint: str, params: Optional[Mapping[str, Any]] = None) -> Any:
+                if endpoint == "/files/ARG":
+                    return {
+                        "document": {
+                            "id": "0:1",
+                            "children": [{"id": "7:8", "children": []}],
+                        }
+                    }
+                if endpoint == "/images/ARG":
+                    self.image_calls += 1
+                    requested_ids = text((params or {}).get("ids"))
+                    first_id = requested_ids.split(",", 1)[0]
+                    return {
+                        "images": {
+                            first_id: "https://assets.example/invalid-{}.png".format(self.image_calls)
+                        }
+                    }
+                raise AssertionError("unexpected fake endpoint: {}".format(endpoint))
+
+        invalid_download_count = [0]
+
+        def invalid_image_open(request: Request, timeout: float = 0) -> _FakeDownloadResponse:
+            del timeout
+            invalid_download_count[0] += 1
+            return _FakeDownloadResponse(
+                b"<html>not an image</html>", "text/html", request.full_url
+            )
+
+        preserved_output = root / "preserve.png"
+        preserved_output.write_bytes(b"existing-output")
+        invalid_client = InvalidExportClient()
+        try:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                handle_export(
+                    invalid_client,  # type: ignore[arg-type]
+                    ["ARG", "7:8", "png", "2", str(preserved_output)],
+                    download_opener=invalid_image_open,
+                )
+        except FileOperationError:
+            pass
+        else:
+            failures.append("invalid exports must fail")
+        check(
+            "invalid fallback downloads preserve old target",
+            preserved_output.read_bytes() == b"existing-output" and invalid_download_count[0] >= 4,
+        )
+        check(
+            "invalid fallback staging cleanup",
+            not list(root.glob(".preserve.png-candidate-*.tmp")),
+        )
+
+        asset_result = _download_asset(
+            "asset-ref",
+            "https://assets.example/image.png",
+            root,
+            opener=payload_opener(small_png, "image/png"),
+        )
+        check("asset random staging committed", asset_result.path.read_bytes() == small_png)
+        check("asset staging cleanup", not list(root.glob(".asset-ref-asset-*.tmp")))
+        if os.name != "nt":
+            check("asset mode 0644", stat.S_IMODE(asset_result.path.stat().st_mode) == 0o644)
+
+        secure_file = root / "secure-token-mode"
+        atomic_write_bytes(secure_file, b"secret\n", mode=0o600)
+        if os.name != "nt":
+            check("token-style atomic mode 0600", stat.S_IMODE(secure_file.stat().st_mode) == 0o600)
+
+        uninstall_home = root / "uninstall-home"
+        install_bin = uninstall_home / ".local" / "bin"
+        install_bin.mkdir(parents=True)
+        unverified_entry = install_bin / "figma-api"
+        unverified_entry.write_text("unrelated user file\n", encoding="utf-8")
+        verified_entry = install_bin / "figma-api.py"
+        verified_entry.write_text(INSTALL_MARKER_LINE + "\n", encoding="utf-8")
+        uninstall_token = token_path(uninstall_home)
+        uninstall_token.parent.mkdir(parents=True)
+        uninstall_token.write_text("offline-placeholder\n", encoding="utf-8")
+        uninstall_stdout = io.StringIO()
+        synthetic_workspace = root / "workspace"
+        synthetic_tools = synthetic_workspace / "tools"
+        synthetic_tools.mkdir(parents=True)
+        (synthetic_workspace / "AGENTS.md").write_text("offline fixture\n", encoding="utf-8")
+        synthetic_source = synthetic_tools / "figma-api.py"
+        synthetic_source.write_text(INSTALL_MARKER_LINE + "\n", encoding="utf-8")
+        check(
+            "workspace source classified as protected",
+            not _is_proven_install_entry(
+                synthetic_source, synthetic_source.resolve(strict=False)
+            )[0],
+        )
+        with contextlib.redirect_stdout(uninstall_stdout), contextlib.redirect_stderr(io.StringIO()):
+            handle_uninstall(["--force"], home=uninstall_home, scan_global=False)
+        check(
+            "uninstall removes only proven entries/token",
+            unverified_entry.is_file()
+            and not verified_entry.exists()
+            and not uninstall_token.exists()
+            and "[skip]" in uninstall_stdout.getvalue(),
+        )
+        check("uninstall never removes workspace source", Path(__file__).is_file())
+
+    if failures:
+        for failure in failures:
+            eprint("FAIL: {}".format(failure))
+        eprint("Self-test: {} passed, {} failed".format(passed, len(failures)))
+        return 1
+    print("Self-test: {} passed, 0 failed (offline)".format(passed))
+    return 0
+
+
+def run_self_test() -> int:
+    """Run deterministic tests with a temporary HOME and no network access."""
+    saved_home = {name: os.environ.get(name) for name in ("HOME", "USERPROFILE")}
+    with tempfile.TemporaryDirectory(prefix="figma-api-self-test-home-") as temporary_home:
+        os.environ["HOME"] = temporary_home
+        os.environ["USERPROFILE"] = temporary_home
+        try:
+            return _run_self_test_body()
+        finally:
+            for name, previous in saved_home.items():
+                if previous is None:
+                    os.environ.pop(name, None)
+                else:
+                    os.environ[name] = previous
+
+
+def preflight_command(command: str, args: Sequence[str]) -> None:
+    """Validate command syntax before token loading or any network request."""
+    if command == "screenshot":
+        parse_export_arguments(args, screenshot=True, validate_output=False)
+        return
+    if command == "export":
+        parse_export_arguments(args, screenshot=False, validate_output=False)
+        return
+    if command == "layout":
+        positionals, _flags, _switches = split_flags(args, set(), {"--json"})
+        _file_key, _node_id, remaining = parse_file_and_node(positionals, "layout")
+        if remaining:
+            raise UsageError("Usage: {} layout <url> [--json]".format(PROGRAM))
+        return
+    if command == "images":
+        positionals, _flags, _switches = split_flags(args, set())
+        _file_key, _node_id, remaining = parse_file_and_node(positionals, "images")
+        if len(remaining) > 1:
+            raise UsageError("Usage: {} images <url> [output_dir]".format(PROGRAM))
+        return
+
+    file_commands = {
+        "file-info", "file-meta", "comments", "versions", "file-components",
+        "file-component-sets", "file-styles", "variables-local", "variables-published",
+    }
+    if command in file_commands:
+        _require_args(args, 1, 1, "{} <url|file_key>".format(command))
+        get_file_key(args[0])
+        return
+    if command == "comment-reactions":
+        _require_args(args, 2, 2, "comment-reactions <url|file_key> <comment_id>")
+        get_file_key(args[0])
+        validate_identifier(args[1], "comment ID")
+        return
+    if command == "me":
+        _require_args(args, 0, 0, "me")
+        return
+
+    identifier_labels = {
+        "team-projects": "team ID",
+        "project-files": "project ID",
+        "team-components": "team ID",
+        "component": "component key",
+        "team-component-sets": "team ID",
+        "component-set": "component set key",
+        "team-styles": "team ID",
+        "style": "style key",
+    }
+    if command in identifier_labels:
+        _require_args(args, 1, 1, "{} <identifier>".format(command))
+        validate_identifier(args[0], identifier_labels[command])
+        return
+    if command == "dev-resources":
+        _require_args(args, 1, 2, "dev-resources <url|file_key> [node_id]")
+        if looks_like_url(args[0]):
+            parsed = parse_figma_url(args[0])
+            if len(args) == 2 and parsed.node_id:
+                raise UsageError("node ID was supplied in both URL and positional arguments.")
+        else:
+            validate_identifier(args[0], "file key")
+        if len(args) == 2:
+            validate_identifier(args[1], "node ID")
+        return
+    if command == "analytics":
+        _require_args(args, 1, 3, "analytics <url|file_key> [type] [action]")
+        get_file_key(args[0])
+        item_type = args[1] if len(args) > 1 else "component"
+        action = args[2] if len(args) > 2 else "usages"
+        if item_type not in {"component", "style", "variable"}:
+            raise UsageError("analytics type must be component, style, or variable.")
+        if action not in {"actions", "usages"}:
+            raise UsageError("analytics action must be actions or usages.")
+        return
+    if command == "raw":
+        _require_args(args, 1, 1, "raw </endpoint>")
+        endpoint = args[0]
+        if not endpoint.startswith("/") or endpoint.startswith("//") or "://" in endpoint:
+            raise UsageError("raw endpoint must be an API path beginning with '/'.")
+        return
+    raise UsageError("Unsupported command: {}".format(command))
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    try:
+        if not arguments or arguments[0] in {"help", "-h", "--help"}:
+            if len(arguments) > 1:
+                raise UsageError("help does not accept additional arguments.")
+            print(HELP_TEXT)
+            return 0
+        if arguments[0] in {"self-test", "--self-test"}:
+            if len(arguments) != 1:
+                raise UsageError("self-test does not accept additional arguments.")
+            return run_self_test()
+
+        requested = arguments[0]
+        rest = arguments[1:]
+        if requested == "token":
+            handle_token(rest)
+            return 0
+        if requested == "url":
+            handle_url(rest)
+            return 0
+        if requested == "uninstall":
+            handle_uninstall(rest)
+            return 0
+
+        command = ALIASES.get(requested)
+        if command is None:
+            raise UsageError("Unknown command '{}'. Run '{} help' for usage.".format(requested, PROGRAM))
+
+        # Validate syntax first so missing credentials never mask a usage error.
+        preflight_command(command, rest)
+        client = FigmaClient(load_token())
+        if command == "screenshot":
+            handle_export(client, rest, screenshot=True)
+        elif command == "export":
+            handle_export(client, rest, screenshot=False)
+        else:
+            AUTH_HANDLERS[command](client, rest)
+        return 0
+    except CliError as exc:
+        eprint("Error: {}".format(exc.message))
+        return exc.code
+    except BrokenPipeError:
+        try:
+            sys.stderr.close()
+        except OSError:
+            pass
+        return 0
+    except KeyboardInterrupt:
+        eprint("Error: cancelled.")
+        return 130
+    except Exception:
+        # Avoid dumping request internals or credentials from an unexpected
+        # urllib exception.  Expected failures above carry precise categories.
+        eprint("Error: unexpected internal failure.")
+        return EXIT_HTTP
+
+
+if __name__ == "__main__":
+    sys.exit(main())

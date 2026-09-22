@@ -1,4 +1,11 @@
 dotfiles:
+  081d89fbe425cdeb496d5bd18b993217/figma-api:
+    darwin:
+      path: ~/.local/bin/figma-api
+    linux:
+      path: ~/.local/bin/figma-api
+    windows:
+      path: ~/.local/bin/figma-api
   081d89fbe425cdeb496d5bd18b993217/logcode:
     darwin:
       path: ~/.local/bin/logcode
@@ -67,6 +74,20 @@ dotfiles:
       path: ~/.zshrc
     linux:
       path: ~/.zshrc
+  4db5b8f8712ff6fc632dbea9fc993b31/token:
+    darwin:
+      path: ~/.config/figma/token
+    linux:
+      path: ~/.config/figma/token
+    windows:
+      path: ~/.config/figma/token
+  652aa1debbd6ada71b0deb87085849e6/SKILL.md:
+    darwin:
+      path: ~/.config/opencode/skills/figma-api/SKILL.md
+    linux:
+      path: ~/.config/opencode/skills/figma-api/SKILL.md
+    windows:
+      path: ~/.config/opencode/skills/figma-api/SKILL.md
   6ee1504095caefc322f5ca38b8074fd4/config:
     darwin:
       path: ~/.ssh/config
