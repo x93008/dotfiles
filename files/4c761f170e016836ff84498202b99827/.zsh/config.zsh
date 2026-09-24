@@ -31,5 +31,7 @@ source $HOME/.zsh/gibo.zsh
 # 加载平台独有设置
 source $HOME/.zsh/$(uname -s)/config.zsh
 
+path=("$HOME/.local/bin" "$path[@]")
+
 # 对PATH环境变量的路径做一次去重
 typeset -U path
