@@ -52,9 +52,6 @@ dotfiles:
       path: ~/.netrc
     windows:
       path: ~/.netrc
-  4c761f170e016836ff84498202b99827/.proxy_client:
-    linux:
-      path: ~/.proxy_client
   4c761f170e016836ff84498202b99827/.tmux.conf:
     linux:
       path: ~/.tmux.conf
@@ -103,6 +100,12 @@ dotfiles:
       path: ~/.config/secret.env
     linux:
       path: ~/.config/secret.env
-  d3af664e79e608989282aebdd2445220/proxy_client.service:
+  8d4f8aca4c5e30c755c9d7c02b47a66a/gfwlist.json:
     linux:
-      path: ~/.config/systemd/user/proxy_client.service
+      path: ~/.local/share/sing-box/rule-set/gfwlist.json
+  d3af664e79e608989282aebdd2445220/sing-box.service:
+    linux:
+      path: ~/.config/systemd/user/sing-box.service
+  d659b0792c9b3ebe65a28a7e613cc21a/config.json:
+    linux:
+      path: ~/.local/share/sing-box/config.json
