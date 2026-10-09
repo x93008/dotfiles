@@ -6,7 +6,7 @@ After=network-online.target
 WorkingDirectory=%h/.local/share/sing-box
 # 自愈: 启动前若 srs 缺失或源文件更新, 自动重编译 (脚本缺失时跳过, 不阻塞启动)
 ExecStartPre=-%h/.local/share/sing-box/rule-set/compile.sh
-ExecStart=/usr/bin/sing-box run -c config.json
+ExecStart=/usr/bin/sing-box run -C conf.d
 Restart=always
 RestartSec=3
 

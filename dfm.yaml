@@ -109,6 +109,6 @@ dotfiles:
   d3af664e79e608989282aebdd2445220/sing-box.service:
     linux:
       path: ~/.config/systemd/user/sing-box.service
-  d659b0792c9b3ebe65a28a7e613cc21a/config.json:
+  f3716fe5d29af02b82306606de0231e7/10-to_vps.json:
     linux:
-      path: ~/.local/share/sing-box/config.json
+      path: ~/.local/share/sing-box/conf.d/10-to_vps.json
