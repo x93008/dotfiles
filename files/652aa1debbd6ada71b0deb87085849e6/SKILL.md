@@ -1,10 +1,15 @@
 ---
 name: Figma REST CLI
-description: Use when a user provides a Figma URL or asks to inspect exact UI layout, colors, typography, screenshots, image assets, or export Figma nodes as SVG, PNG, PDF, or JPG.
+description: Fallback for Figma work only when no Figma MCP is available. Do not activate this skill when a Figma MCP exists; use the MCP instead. Otherwise, use it for Figma URLs, exact UI inspection, screenshots, image assets, or node exports.
 slash: true
 ---
 
 # Figma REST CLI
+
+## Activation guard
+
+- If a Figma MCP is available, do not use this skill or the `figma-api` CLI; use the Figma MCP instead.
+- Use this skill only as a fallback when no Figma MCP is available.
 
 Use the `figma-api` executable through the shell tool.
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
-  "preset": "junhua",
+  "preset": "balanced",
   "disabled_agents": [],
   "presets": {
     "glm": {
@@ -181,43 +181,66 @@
     },
     "balanced": {
       "orchestrator": {
-        "model": "opencode-go/deepseek-v4-flash",
-        "skills": ["*"],
+        "model": "junhua/gpt-5.6-terra",
+        "variant": "medium",
+        "skills": [
+          "*",
+          "!brainstorming",
+          "!dispatching-parallel-agents",
+          "!executing-plans",
+          "!finishing-a-development-branch",
+          "!receiving-code-review",
+          "!requesting-code-review",
+          "!subagent-driven-development",
+          "!systematic-debugging",
+          "!test-driven-development",
+          "!using-git-worktrees",
+          "!using-superpowers",
+          "!verification-before-completion",
+          "!writing-plans",
+          "!writing-skills"
+        ],
         "mcps": ["*", "!context7"]
       },
       "oracle": {
-        "model": "opencode-go/qwen3.7-max",
+        "model": "junhua/gpt-5.6-sol",
         "variant": "high",
         "skills": ["simplify"],
         "mcps": []
       },
       "librarian": {
-        "model": "opencode-go/qwen3.6-plus",
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "low",
         "skills": [],
         "mcps": ["websearch", "context7", "gh_grep"]
       },
       "explorer": {
-        "model": "opencode-go/deepseek-v4-flash",
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "low",
         "skills": [],
         "mcps": []
       },
       "designer": {
-        "model": "kimi-for-coding/k2p6",
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "kimi-for-coding/k2p7",
-        "variant": "high",
+        "model": "junhua/gpt-5.6-luna",
+        "variant": "medium",
         "skills": [],
         "mcps": []
       },
       "observer": {
-        "model": "zhipuai-coding-plan/glm-5v-turbo",
+        "model": "kimi-code-plan-cn/k3-256k",
         "skills": [],
         "mcps": []
       },
-      "councillor": { "model": "opencode-go/deepseek-v4-pro" }
+      "councillor": {
+        "model": "junhua/gpt-5.6-sol",
+        "variant": "medium"
+      }
     }
   }
 }
