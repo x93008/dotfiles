@@ -7,7 +7,7 @@ command -v gibo &> /dev/null && alias gi="gibo dump"
 alias guml='plantuml -tsvg'
 alias mj='make -j8'
 
-alias socks5proxy='export http_proxy=socks5://127.0.0.1:1080;export https_proxy=socks5://127.0.0.1:1080'
+alias socks5proxy='export http_proxy=socks5h://127.0.0.1:10800;export https_proxy=socks5h://127.0.0.1:10800'
 alias httpproxy="export http_proxy=http://$PROXY_HOST:10800; export https_proxy=\$http_proxy"
 alias proxyoff='unset http_proxy; unset https_proxy'
 
