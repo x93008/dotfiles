@@ -100,6 +100,9 @@ dotfiles:
       path: ~/.config/secret.env
     linux:
       path: ~/.config/secret.env
+  8d4f8aca4c5e30c755c9d7c02b47a66a/compile.sh:
+    linux:
+      path: ~/.local/share/sing-box/rule-set/compile.sh
   8d4f8aca4c5e30c755c9d7c02b47a66a/gfwlist.json:
     linux:
       path: ~/.local/share/sing-box/rule-set/gfwlist.json
