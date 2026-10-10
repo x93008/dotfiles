@@ -181,7 +181,7 @@
     },
     "balanced": {
       "orchestrator": {
-        "model": "junhua/gpt-5.6-terra",
+        "model": "junhua/gpt-5.6-sol",
         "variant": "medium",
         "skills": [
           "*",
@@ -221,14 +221,14 @@
         "mcps": []
       },
       "designer": {
-        "model": "junhua/gpt-5.6-luna",
-        "variant": "medium",
+        "model": "kimi-code-plan-cn/k3-256k",
+        "variant": "high",
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "junhua/gpt-5.6-luna",
-        "variant": "medium",
+        "model": "kimi-code-plan-cn/k3",
+        "variant": "high",
         "skills": [],
         "mcps": []
       },
