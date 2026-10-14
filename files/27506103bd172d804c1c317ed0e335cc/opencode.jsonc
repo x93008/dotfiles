@@ -7,11 +7,20 @@
         "baseURL": "https://openai.kadocai.uk/v1"
       },
       "models": {
-        "gpt-image-2": {
-          "name": "GPT Image 2"
+        "gpt-6.1-sol": {
+          "name": "GPT-6.1 Sol"
         },
-        "gpt-5.6-luna": {
-          "name": "GPT 5.6 Luna"
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra"
+        },
+        "gpt-6-sol": {
+          "name": "GPT-6 Sol"
+        },
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna"
+        },
+        "gpt-6": {
+          "name": "GPT-6"
         },
         "gpt-5.6-sol": {
           "name": "GPT 5.6 Sol",
@@ -54,32 +63,14 @@
         "gpt-5.6-terra": {
           "name": "GPT 5.6 Terra"
         },
-        "codex-auto-review": {
-          "name": "Codex Auto Review"
+        "gpt-5.6-luna": {
+          "name": "GPT 5.6 Luna"
         },
-        "gpt-4o-audio-preview": {
-          "name": "gpt-4o-audio-preview"
+        "gpt-5.6": {
+          "name": "GPT-5.6"
         },
-        "gpt-4o-realtime-preview": {
-          "name": "gpt-4o-realtime-preview"
-        },
-        "gpt-5.2": {
-          "name": "GPT-5.2"
-        },
-        "gpt-5.2-2025-12-11": {
-          "name": "gpt-5.2-2025-12-11"
-        },
-        "gpt-5.2-chat-latest": {
-          "name": "gpt-5.2-chat-latest"
-        },
-        "gpt-5.2-pro": {
-          "name": "gpt-5.2-pro"
-        },
-        "gpt-5.2-pro-2025-12-11": {
-          "name": "gpt-5.2-pro-2025-12-11"
-        },
-        "gpt-5.3-codex-spark": {
-          "name": "GPT-5.3 Codex Spark"
+        "gpt-5.5": {
+          "name": "GPT-5.5"
         },
         "gpt-5.4": {
           "name": "GPT-5.4"
@@ -90,35 +81,47 @@
         "gpt-5.4-mini": {
           "name": "GPT-5.4 Mini"
         },
-        "gpt-5.5": {
-          "name": "GPT-5.5"
+        "gpt-5.3-codex-spark": {
+          "name": "GPT-5.3 Codex Spark"
         },
-        "gpt-5.6": {
-          "name": "GPT-5.6 (Sol)"
+        "gpt-5.2-pro": {
+          "name": "gpt-5.2-pro"
         },
-        "gpt-6": {
-          "name": "GPT-6 (Astra)"
+        "gpt-5.2-pro-2025-12-11": {
+          "name": "gpt-5.2-pro-2025-12-11"
         },
-        "gpt-6-astra": {
-          "name": "GPT-6 Astra"
+        "gpt-5.2-chat-latest": {
+          "name": "gpt-5.2-chat-latest"
         },
-        "gpt-6-luna": {
-          "name": "GPT-6 Luna"
+        "gpt-5.2": {
+          "name": "GPT-5.2"
         },
-        "gpt-6-sol": {
-          "name": "GPT-6 Sol"
+        "gpt-5.2-2025-12-11": {
+          "name": "gpt-5.2-2025-12-11"
         },
-        "gpt-image-1": {
-          "name": "GPT Image 1"
+        "gpt-4o-realtime-preview": {
+          "name": "gpt-4o-realtime-preview"
         },
-        "gpt-image-1.5": {
-          "name": "GPT Image 1.5"
+        "gpt-4o-audio-preview": {
+          "name": "gpt-4o-audio-preview"
+        },
+        "codex-auto-review": {
+          "name": "Codex Auto Review"
+        },
+        "gpt-image-2.5-sunburst": {
+          "name": "GPT Image 2.5 Sunburst"
         },
         "gpt-image-2.5-flare": {
           "name": "GPT Image 2.5 Flare"
         },
-        "gpt-image-2.5-sunburst": {
-          "name": "GPT Image 2.5 Sunburst"
+        "gpt-image-2": {
+          "name": "GPT Image 2"
+        },
+        "gpt-image-1.5": {
+          "name": "GPT Image 1.5"
+        },
+        "gpt-image-1": {
+          "name": "GPT Image 1"
         }
       }
     },

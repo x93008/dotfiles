@@ -168,7 +168,7 @@
         "mcps": ["*", "!context7"]
       },
       "oracle": {
-        "model": "junhua/gpt-5.6-sol",
+        "model": "junhua/gpt-6.1-sol",
         "variant": "high",
         "skills": ["simplify"],
         "mcps": []
@@ -180,7 +180,7 @@
         "mcps": ["websearch", "context7", "gh_grep"]
       },
       "explorer": {
-        "model": "junhua/gpt-5.6-luna",
+        "model": "junhua/gpt-6-luna",
         "variant": "low",
         "skills": [],
         "mcps": []
@@ -206,7 +206,7 @@
             "variant": "high"
           },
           {
-            "id": "junhua/gpt-5.6-luna",
+            "id": "junhua/gpt-6.1-sol",
             "variant": "high"
           }
         ],
@@ -227,7 +227,7 @@
         "mcps": []
       },
       "councillor": {
-        "model": "junhua/gpt-5.6-sol",
+        "model": "junhua/gpt-6.1-sol",
         "variant": "medium"
       }
     }
