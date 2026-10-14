@@ -1,0 +1,112 @@
+{
+  "$schema": "https://unpkg.com/oh-my-opencode-slim@3.0.4/oh-my-opencode-slim.schema.json",
+
+  "preset": "balanced",
+
+  "disabled_agents": [],
+  "image_routing": "auto",
+
+  "presets": {
+    "balanced": {
+      "agents": {
+        "orchestrator": {
+          "model": "junhua/gpt-5.6-sol",
+          "variant": "medium",
+          "skills": ["*"],
+          "mcps": ["*", "!context7"]
+        },
+
+        "oracle": {
+          "model": "junhua/gpt-6-astra",
+          "variant": "high",
+          "skills": ["simplify"],
+          "mcps": []
+        },
+
+        "librarian": {
+          "model": "junhua/gpt-6-luna",
+          "variant": "low",
+          "skills": [],
+          "mcps": ["context7", "gh_grep"],
+          "permission": {
+            "websearch": "allow"
+          }
+        },
+
+        "explorer": {
+          "model": "junhua/gpt-6-luna",
+          "variant": "low",
+          "skills": [],
+          "mcps": []
+        },
+
+        "designer": {
+          "model": [
+            {
+              "id": "kimi-code-plan-cn/k3-256k",
+              "variant": "high"
+            },
+            {
+              "id": "junhua/gpt-6-luna",
+              "variant": "medium"
+            }
+          ],
+          "skills": [],
+          "mcps": []
+        },
+
+        "observer": {
+          "model": [
+            "kimi-code-plan-cn/k3-256k",
+            {
+              "id": "junhua/gpt-6-luna",
+              "variant": "medium"
+            }
+          ],
+          "skills": [],
+          "mcps": []
+        },
+
+        "fixer": {
+          "model": [
+            {
+              "id": "kimi-code-plan-cn/k3",
+              "variant": "high"
+            },
+            {
+              "id": "junhua/gpt-6-sol",
+              "variant": "high"
+            }
+          ],
+          "skills": [],
+          "mcps": []
+        },
+
+        "council": {
+          "model": "junhua/gpt-6.1-sol",
+          "variant": "high",
+          "skills": [],
+          "mcps": []
+        }
+      }
+    }
+  },
+
+  "council": {
+    "default_preset": "balanced",
+    "presets": {
+      "balanced": {
+        "architect": {
+          "model": "junhua/gpt-6-astra",
+          "variant": "high",
+          "prompt": "重点评估架构边界、长期维护成本和迁移风险。"
+        },
+        "critic": {
+          "model": "junhua/gpt-6-luna",
+          "variant": "high",
+          "prompt": "重点寻找错误、遗漏、边界条件和失败模式。"
+        }
+      }
+    }
+  }
+}
