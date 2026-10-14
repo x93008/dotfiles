@@ -2,6 +2,10 @@
   "$schema": "https://unpkg.com/oh-my-opencode-slim@latest/oh-my-opencode-slim.schema.json",
   "preset": "balanced",
   "disabled_agents": [],
+  "fallback": {
+    "enabled": true,
+    "maxRetries": 3
+  },
   "presets": {
     "glm": {
       "orchestrator": {
@@ -182,19 +186,43 @@
         "mcps": []
       },
       "designer": {
-        "model": "kimi-code-plan-cn/k3-256k",
-        "variant": "high",
+        "model": [
+          {
+            "id": "kimi-code-plan-cn/k3-256k",
+            "variant": "high"
+          },
+          {
+            "id": "junhua/gpt-5.6-luna",
+            "variant": "medium"
+          }
+        ],
         "skills": [],
         "mcps": []
       },
       "fixer": {
-        "model": "kimi-code-plan-cn/k3",
-        "variant": "high",
+        "model": [
+          {
+            "id": "kimi-code-plan-cn/k3",
+            "variant": "high"
+          },
+          {
+            "id": "junhua/gpt-5.6-luna",
+            "variant": "high"
+          }
+        ],
         "skills": [],
         "mcps": []
       },
       "observer": {
-        "model": "kimi-code-plan-cn/k3-256k",
+        "model": [
+          {
+            "id": "kimi-code-plan-cn/k3-256k"
+          },
+          {
+            "id": "junhua/gpt-5.6-luna",
+            "variant": "medium"
+          }
+        ],
         "skills": [],
         "mcps": []
       },
