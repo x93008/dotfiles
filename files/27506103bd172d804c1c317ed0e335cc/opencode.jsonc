@@ -301,16 +301,77 @@
         }
       }
     },
-    "friendmlx": {
-      "package": "aisdk:@ai-sdk/openai",
-      "name": "Friend MLX",
+    "cch": {
+      "env": ["LEYTOU_CCH_DEEPSEEK_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "name": "CCH",
       "settings": {
-        "baseURL": "http://120.48.144.58:8901/v1",
-        "apiKey": "{env:FRIEND_MLX_API_KEY}"
+        "baseURL": "{env:CCH_URL}/v1"
       },
       "models": {
-        "MLX-Qwen3.5-9B-Claude-4.6-Opus-Reasoning-Distilled-4bit": {
-          "name": "MLX Qwen3.5 9B Distilled"
+        "CVTE-AUTO": {
+          "name": "CVTE Auto"
+        },
+        "claude-fable-5.1": {
+          "name": "Claude Fable 5.1"
+        },
+        "claude-haiku-5.5": {
+          "name": "Claude Haiku 5.5"
+        },
+        "claude-opus-5.5": {
+          "name": "Claude Opus 5.5"
+        },
+        "claude-sonnet-5.5": {
+          "name": "Claude Sonnet 5.5"
+        },
+        "deepseek-flash": {
+          "name": "DeepSeek Flash"
+        },
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro"
+        },
+        "glm-5.3": {
+          "name": "GLM 5.3"
+        },
+        "glm-5.3-flash": {
+          "name": "GLM 5.3 Flash"
+        },
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra"
+        },
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna"
+        },
+        "gpt-6.1-sol": {
+          "name": "GPT-6.1 Sol"
+        },
+        "kimi-k3": {
+          "name": "Kimi K3"
+        },
+        "qwen3.7-plus": {
+          "name": "Qwen 3.7 Plus"
+        },
+        "qwen3.8-flash": {
+          "name": "Qwen 3.8 Flash"
+        },
+        "qwen3.8-max": {
+          "name": "Qwen 3.8 Max"
+        }
+      }
+    },
+    "leytouDeepSeek": {
+      "env": ["LEYTOU_DEEPSEEK_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "name": "Leytou DeepSeek",
+      "settings": {
+        "baseURL": "https://api.deepseek.com"
+      },
+      "models": {
+        "deepseek-flash": {
+          "name": "DeepSeek Flash"
+        },
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro"
         }
       }
     }

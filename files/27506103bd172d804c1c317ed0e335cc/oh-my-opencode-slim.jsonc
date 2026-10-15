@@ -10,7 +10,7 @@
     "balanced": {
       "agents": {
         "orchestrator": {
-          "model": "junhua/gpt-5.6-sol",
+          "model": "junhua/gpt-6.1-sol",
           "variant": "medium",
           "skills": ["*"],
           "mcps": ["*", "!context7"]
@@ -85,6 +85,77 @@
         "council": {
           "model": "junhua/gpt-6.1-sol",
           "variant": "high",
+          "skills": [],
+          "mcps": []
+        }
+      }
+    },
+
+    "fast": {
+      "agents": {
+        "orchestrator": {
+          "model": "kimi-code-plan-cn/kimi-for-coding-highspeed",
+          "skills": ["*"],
+          "mcps": ["*", "!context7"]
+        },
+
+        "oracle": {
+          "model": [
+            "cch/deepseek-v4-pro",
+            "leytouDeepSeek/deepseek-v4-pro"
+          ],
+          "skills": ["simplify"],
+          "mcps": []
+        },
+
+        "librarian": {
+          "model": [
+            "cch/deepseek-flash",
+            "leytouDeepSeek/deepseek-flash"
+          ],
+          "skills": [],
+          "mcps": ["context7", "gh_grep"],
+          "permission": {
+            "websearch": "allow"
+          }
+        },
+
+        "explorer": {
+          "model": [
+            "cch/deepseek-flash",
+            "leytouDeepSeek/deepseek-flash"
+          ],
+          "skills": [],
+          "mcps": []
+        },
+
+        "designer": {
+          "model": "kimi-code-plan-cn/k3-256k",
+          "skills": [],
+          "mcps": []
+        },
+
+        "observer": {
+          "model": "kimi-code-plan-cn/k3-256k",
+          "skills": [],
+          "mcps": []
+        },
+
+        "fixer": {
+          "model": [
+            "kimi-code-plan-cn/kimi-for-coding-highspeed",
+            "cch/deepseek-flash",
+            "leytouDeepSeek/deepseek-flash"
+          ],
+          "skills": [],
+          "mcps": []
+        },
+
+        "council": {
+          "model": [
+            "cch/deepseek-v4-pro",
+            "leytouDeepSeek/deepseek-v4-pro"
+          ],
           "skills": [],
           "mcps": []
         }
