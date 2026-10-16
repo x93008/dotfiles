@@ -11,7 +11,7 @@
       "agents": {
         "orchestrator": {
           "model": "junhua/gpt-6.1-sol",
-          "variant": "medium",
+          "variant": "medium-fast",
           "skills": ["*"],
           "mcps": ["*", "!context7"]
         },
@@ -25,7 +25,7 @@
 
         "librarian": {
           "model": "junhua/gpt-6-luna",
-          "variant": "low",
+          "variant": "low-fast",
           "skills": [],
           "mcps": ["context7", "gh_grep"],
           "permission": {
@@ -74,7 +74,7 @@
               "variant": "high"
             },
             {
-              "id": "junhua/gpt-6-sol",
+              "id": "junhua/gpt-6.1-sol",
               "variant": "high"
             }
           ],
@@ -101,8 +101,9 @@
 
         "oracle": {
           "model": [
-            "cch/deepseek-v4-pro",
-            "leytouDeepSeek/deepseek-v4-pro"
+            "kimi-code-plan-cn/k3",
+            "cch/deepseek-flash",
+            "leytouDeepSeek/deepseek-flash"
           ],
           "skills": ["simplify"],
           "mcps": []
@@ -153,8 +154,8 @@
 
         "council": {
           "model": [
-            "cch/deepseek-v4-pro",
-            "leytouDeepSeek/deepseek-v4-pro"
+            "cch/deepseek-flash",
+            "leytouDeepSeek/deepseek-flash"
           ],
           "skills": [],
           "mcps": []
