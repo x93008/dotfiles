@@ -10,22 +10,10 @@
         "gpt-6.1-sol": {
           "name": "GPT-6.1 Sol",
           "limit": {
-            "context": 272000,
-            "output": 131072
+            "context": 500000,
+            "output": 128000
           },
           "variants": [
-            {
-              "id": "none",
-              "settings": {
-                "reasoningEffort": "none"
-              }
-            },
-            {
-              "id": "minimal",
-              "settings": {
-                "reasoningEffort": "minimal"
-              }
-            },
             {
               "id": "low",
               "settings": {
@@ -75,22 +63,10 @@
         "gpt-6-astra": {
           "name": "GPT-6 Astra",
           "limit": {
-            "context": 272000,
-            "output": 131072
+            "context": 500000,
+            "output": 128000
           },
           "variants": [
-            {
-              "id": "none",
-              "settings": {
-                "reasoningEffort": "none"
-              }
-            },
-            {
-              "id": "minimal",
-              "settings": {
-                "reasoningEffort": "minimal"
-              }
-            },
             {
               "id": "low",
               "settings": {
@@ -133,20 +109,14 @@
         "gpt-6-luna": {
           "name": "GPT-6 Luna",
           "limit": {
-            "context": 272000,
-            "output": 131072
+            "context": 500000,
+            "output": 128000
           },
           "variants": [
             {
               "id": "none",
               "settings": {
                 "reasoningEffort": "none"
-              }
-            },
-            {
-              "id": "minimal",
-              "settings": {
-                "reasoningEffort": "minimal"
               }
             },
             {
