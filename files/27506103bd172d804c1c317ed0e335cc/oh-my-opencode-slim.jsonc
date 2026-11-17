@@ -43,12 +43,12 @@
         "designer": {
           "model": [
             {
-              "id": "kimi-code-plan-cn/k3-256k",
-              "variant": "high"
-            },
-            {
               "id": "junhua/gpt-6-luna",
               "variant": "medium"
+            },
+            {
+              "id": "kimi-code-plan-cn/k3-256k",
+              "variant": "high"
             }
           ],
           "skills": [],
@@ -57,11 +57,11 @@
 
         "observer": {
           "model": [
-            "kimi-code-plan-cn/k3-256k",
             {
               "id": "junhua/gpt-6-luna",
               "variant": "medium"
-            }
+            },
+            "kimi-code-plan-cn/k3-256k"
           ],
           "skills": [],
           "mcps": []

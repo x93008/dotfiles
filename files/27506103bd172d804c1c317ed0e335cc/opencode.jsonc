@@ -278,6 +278,222 @@
         }
       }
     },
+    "sub2api": {
+      "env": ["JUNHUA_COMPOSITE_API_KEY"],
+      "package": "aisdk:@ai-sdk/openai",
+      "name": "sub2api",
+      "settings": {
+        "baseURL": "https://openai.kadocai.uk/v1",
+        "apiKey": "{env:JUNHUA_COMPOSITE_API_KEY}"
+      },
+      "models": {
+        "gpt-6.1-sol": {
+          "name": "GPT-6.1 Sol",
+          "limit": {
+            "context": 500000,
+            "output": 128000
+          },
+          "variants": [
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
+            },
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
+            },
+            {
+              "id": "medium-fast",
+              "settings": {
+                "reasoningEffort": "medium",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
+            },
+            {
+              "id": "high-fast",
+              "settings": {
+                "reasoningEffort": "high",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
+            },
+            {
+              "id": "max",
+              "settings": {
+                "reasoningEffort": "max"
+              }
+            }
+          ]
+        },
+        "gpt-6-astra": {
+          "name": "GPT-6 Astra",
+          "limit": {
+            "context": 500000,
+            "output": 128000
+          },
+          "variants": [
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
+            },
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
+            },
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
+            },
+            {
+              "id": "high-fast",
+              "settings": {
+                "reasoningEffort": "high",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
+            },
+            {
+              "id": "max",
+              "settings": {
+                "reasoningEffort": "max"
+              }
+            }
+          ]
+        },
+        "gpt-6-luna": {
+          "name": "GPT-6 Luna",
+          "limit": {
+            "context": 500000,
+            "output": 128000
+          },
+          "variants": [
+            {
+              "id": "none",
+              "settings": {
+                "reasoningEffort": "none"
+              }
+            },
+            {
+              "id": "low",
+              "settings": {
+                "reasoningEffort": "low"
+              }
+            },
+            {
+              "id": "low-fast",
+              "settings": {
+                "reasoningEffort": "low",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "medium",
+              "settings": {
+                "reasoningEffort": "medium"
+              }
+            },
+            {
+              "id": "medium-fast",
+              "settings": {
+                "reasoningEffort": "medium",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "high",
+              "settings": {
+                "reasoningEffort": "high"
+              }
+            },
+            {
+              "id": "high-fast",
+              "settings": {
+                "reasoningEffort": "high",
+                "serviceTier": "fast"
+              }
+            },
+            {
+              "id": "xhigh",
+              "settings": {
+                "reasoningEffort": "xhigh"
+              }
+            },
+            {
+              "id": "max",
+              "settings": {
+                "reasoningEffort": "max"
+              }
+            }
+          ]
+        },
+        "codex-auto-review": {
+          "name": "Codex Auto Review"
+        },
+        // Kimi Code 官方模型 ID：K3 的 256K 上下文版本，上游 k3-256k（配额约为 k3 的一半）
+        "kimi-k3-256k": {
+          "modelID": "k3-256k",
+          "package": "@opencode/ai/providers/openai/chat",
+          "name": "Kimi K3 256K",
+          "limit": {
+            "context": 262144,
+            "output": 131072
+          }
+        },
+        "kimi-k3": {
+          "modelID": "kimi-k3",
+          "package": "@opencode/ai/providers/openai/chat",
+          "name": "Kimi K3",
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          }
+        },
+        "kimi-k3.1-pro": {
+          "modelID": "kimi-k3.1-pro",
+          "package": "@opencode/ai/providers/openai/chat",
+          "name": "Kimi K3.1 Pro",
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          }
+        },
+        "kimi-k3.1-pro-highspeed": {
+          "modelID": "kimi-k3.1-pro-highspeed",
+          "package": "@opencode/ai/providers/openai/chat",
+          "name": "Kimi K3.1 Pro Highspeed",
+          "limit": {
+            "context": 1048576,
+            "output": 131072
+          }
+        }
+      }
+    },
     "cch": {
       "env": ["LEYTOU_CCH_DEEPSEEK_KEY"],
       "package": "@opencode/ai/providers/openai-compatible",
