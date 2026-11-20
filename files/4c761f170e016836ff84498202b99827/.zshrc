@@ -9,6 +9,9 @@ antigen bundle paulirish/git-open
 # pip自动补全包名
 antigen bundle pip
 
+# 自动补全yarn相关命令
+antigen bundle yarn
+
 # 智能提示缺少的命令如何安装
 antigen bundle command-not-found
 
